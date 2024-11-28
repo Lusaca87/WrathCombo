@@ -1,11 +1,16 @@
 {
-  "Author": "Team Wrath",
-  "Name": "Wrath Combo",
+  "Author": "Team Wrath & Velvet",
+  "Name": "Wrath Combo - Edit by Velvet",
   "InternalName": "WrathCombo",
   "DalamudApiLevel": 11,
+  "Tags": [],
   "Punchline": "Condenses combos and mutually exclusive abilities onto a single button - and then some.",
   "Description": "Condenses combos and mutually exclusive abilities onto a single button - and then some.",
-  "RepoUrl": "https://github.com/PunishXIV/WrathCombo",
+  "RepoUrl": "https://github.com/Lusaca87/WrathCombo",
   "IconUrl": "https://s3.puni.sh/media/plugin/60/icon-2bwhkn3zf1f.png",
-  "Changelog": "Please check the project's GitHub or Discord for a full changelog."
+  "Changelog": "Please check the project's GitHub or Discord for a full changelog.",
+  "AcceptsFeedback": false,
+  "DownloadLinkInstall": "https://puni.sh/api/plugins/download/60/WrathCombo/versions/latest.zip",
+  "DownloadLinkUpdate": "https://puni.sh/api/plugins/download/60/WrathCombo/versions/latest.zip",
+  "LastUpdate": 1732474730670
 }

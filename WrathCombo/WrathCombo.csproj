@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Authors>Team Wrath</Authors>
+		<Authors>Team Wrath + Velvet</Authors>
 		<Company>-</Company>
 		<Version>1.0.0.3</Version>
 		<!-- This is the version that will be used when pushing to the repo.-->
@@ -17,6 +17,7 @@
 		<DalamudLibPath>$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
 		<DalamudPluginPath>$(appdata)\XIVLauncher\installedPlugins\WrathCombo\$(version)</DalamudPluginPath>
 		<DalamudDevPlugins>$(appdata)\XIVLauncher\devPlugins\WrathCombo\</DalamudDevPlugins>
+		<ExportRelease>$(userprofile)\Documents\XIVPLUG\WrathCombo\</ExportRelease>
 		<AssemblyName>WrathCombo</AssemblyName>
 		<PackageId>WrathCombo</PackageId>
 		<Product>WrathCombo</Product>
@@ -30,7 +31,7 @@
 		<ProduceReferenceAssembly>false</ProduceReferenceAssembly>
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-		<OutputPath>bin\Release</OutputPath>
+		<OutputPath>$(ExportRelease)</OutputPath>
 		<NoWarn>CS1591</NoWarn>
 	</PropertyGroup>
 

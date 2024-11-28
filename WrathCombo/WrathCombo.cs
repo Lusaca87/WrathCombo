@@ -37,6 +37,7 @@ namespace WrathCombo
     public sealed partial class WrathCombo : IDalamudPlugin
     {
         private const string Command = "/wrath";
+        private const string privateName = "Wrath Combo - Edit by Velvet";
 
         private readonly ConfigWindow ConfigWindow;
         private readonly TargetHelper TargetHelper;
@@ -99,7 +100,7 @@ namespace WrathCombo
             P = this;
             pluginInterface.Create<Service>();
             ECommonsMain.Init(pluginInterface, this);
-            PunishLibMain.Init(pluginInterface, "Wrath Combo");
+            PunishLibMain.Init(pluginInterface, privateName);
 
             Service.Configuration = pluginInterface.GetPluginConfig() as PluginConfiguration ?? new PluginConfiguration();
             Service.Address = new PluginAddressResolver();
@@ -123,10 +124,11 @@ namespace WrathCombo
             EzCmd.Add(Command, OnCommand, "Open a window to edit custom combo settings.\n" +
                 "/wrath auto → Toggle Auto-rotation on/off.\n" +
                 "/wrath debug → Dumps a debug log onto your desktop for developers.\n" +
-                "/scombo - Old alias from XIVSlothCombo, still works!");
+                "/scombo - Old alias from XIVSlothCombo, still works!\n\n\n" +
+                "ATTENTION: This is not an official release. Dont ask for support in Puni.sh discord if you encounter some bugs!");
             EzCmd.Add("/scombo", OnCommand);
 
-            DtrBarEntry ??= Svc.DtrBar.Get("Wrath Combo");
+            DtrBarEntry ??= Svc.DtrBar.Get(privateName);
             DtrBarEntry.OnClick = () =>
             {
                 Service.Configuration.RotationConfig.Enabled = !Service.Configuration.RotationConfig.Enabled;
@@ -265,7 +267,7 @@ namespace WrathCombo
 
         /// <inheritdoc/>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Used for non-static only window initialization")]
-        public string Name => "Wrath Combo";
+        public string Name => privateName;
 
         /// <inheritdoc/>
         public void Dispose()
@@ -273,7 +275,7 @@ namespace WrathCombo
             ConfigWindow?.Dispose();
 
             ws.RemoveAllWindows();
-            Svc.DtrBar.Remove("Wrath Combo");
+            Svc.DtrBar.Remove(privateName);
             Svc.Framework.Update -= OnFrameworkUpdate;
             Svc.PluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
             Svc.PluginInterface.UiBuilder.Draw -= DrawUI;
