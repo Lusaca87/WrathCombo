@@ -1,10 +1,7 @@
 ﻿using System.Linq;
-using System.Xml.Schema;
 using Dalamud.Game.ClientState.JobGauge.Types;
 using ECommons.DalamudServices;
-using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
-using Lumina.Excel.Sheets;
 using WrathCombo.Combos.JobHelpers.Enums;
 using WrathCombo.Data;
 using static WrathCombo.CustomComboNS.Functions.CustomComboFunctions;
@@ -71,13 +68,10 @@ internal partial class MCH
     internal static bool battery => Gauge.Battery >= 100;
 
     public static int BSUsed => ActionWatching.CombatActions.Count(x => x == BarrelStabilizer);
-
-
-
+    
     internal class MCHOpenerLogic
     {
         internal int currentZoneID = Svc.ClientState.TerritoryType;
-        
         
         internal OpenerState currentState = OpenerState.PrePull;
 
@@ -334,8 +328,7 @@ internal partial class MCH
             if (WasLastAction(HeatedCleanShot) && OpenerStep == 33) CurrentState = OpenerState.OpenerFinished;
             else if (OpenerStep == 33) actionID = HeatedCleanShot;
         }
-
-
+        
         private void doStdOpener(ref uint actionID)
         {
             if (WasLastAction(AirAnchor) && OpenerStep == 1) OpenerStep++;
@@ -434,11 +427,8 @@ internal partial class MCH
             if (WasLastAction(HeatedCleanShot) && OpenerStep == 32) CurrentState = OpenerState.OpenerFinished;
             else if (OpenerStep == 32) actionID = HeatedCleanShot;
         }
-        
-        
     }
-
-
+    
     internal static class MCHHelper
     {
         internal static unsafe bool IsComboExpiring(float Times)
