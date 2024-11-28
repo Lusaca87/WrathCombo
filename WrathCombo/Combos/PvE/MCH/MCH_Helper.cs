@@ -1,7 +1,10 @@
 ﻿using System.Linq;
+using System.Xml.Schema;
 using Dalamud.Game.ClientState.JobGauge.Types;
 using ECommons.DalamudServices;
+using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using Lumina.Excel.Sheets;
 using WrathCombo.Combos.JobHelpers.Enums;
 using WrathCombo.Data;
 using static WrathCombo.CustomComboNS.Functions.CustomComboFunctions;
@@ -69,8 +72,13 @@ internal partial class MCH
 
     public static int BSUsed => ActionWatching.CombatActions.Count(x => x == BarrelStabilizer);
 
+
+
     internal class MCHOpenerLogic
     {
+        internal int currentZoneID = Svc.ClientState.TerritoryType;
+        
+        
         internal OpenerState currentState = OpenerState.PrePull;
 
         public uint OpenerStep;
@@ -164,101 +172,15 @@ internal partial class MCH
 
             if (currentState == OpenerState.InOpener)
             {
-                if (WasLastAction(AirAnchor) && OpenerStep == 1) OpenerStep++;
-                else if (OpenerStep == 1) actionID = AirAnchor;
-
-                if (WasLastAction(CheckMate) && OpenerStep == 2) OpenerStep++;
-                else if (OpenerStep == 2) actionID = CheckMate;
-
-                if (WasLastAction(DoubleCheck) && OpenerStep == 3) OpenerStep++;
-                else if (OpenerStep == 3) actionID = DoubleCheck;
-
-                if (WasLastAction(Drill) && OpenerStep == 4) OpenerStep++;
-                else if (OpenerStep == 4) actionID = Drill;
-
-                if (WasLastAction(BarrelStabilizer) && OpenerStep == 5) OpenerStep++;
-                else if (OpenerStep == 5) actionID = BarrelStabilizer;
-
-                if (WasLastAction(Chainsaw) && OpenerStep == 6) OpenerStep++;
-                else if (OpenerStep == 6) actionID = Chainsaw;
-
-                if (WasLastAction(Excavator) && OpenerStep == 7) OpenerStep++;
-                else if (OpenerStep == 7) actionID = Excavator;
-
-                if (WasLastAction(AutomatonQueen) && OpenerStep == 8) OpenerStep++;
-                else if (OpenerStep == 8) actionID = AutomatonQueen;
-
-                if (WasLastAction(Reassemble) && OpenerStep == 9) OpenerStep++;
-                else if (OpenerStep == 9) actionID = Reassemble;
-
-                if (WasLastAction(Drill) && OpenerStep == 10) OpenerStep++;
-                else if (OpenerStep == 10) actionID = Drill;
-
-                if (WasLastAction(CheckMate) && OpenerStep == 11) OpenerStep++;
-                else if (OpenerStep == 11) actionID = CheckMate;
-
-                if (WasLastAction(Wildfire) && OpenerStep == 12) OpenerStep++;
-                else if (OpenerStep == 12) actionID = Wildfire;
-
-                if (WasLastAction(FullMetalField) && OpenerStep == 13) OpenerStep++;
-                else if (OpenerStep == 13) actionID = FullMetalField;
-
-                if (WasLastAction(DoubleCheck) && OpenerStep == 14) OpenerStep++;
-                else if (OpenerStep == 14) actionID = DoubleCheck;
-
-                if (WasLastAction(Hypercharge) && OpenerStep == 15) OpenerStep++;
-                else if (OpenerStep == 15) actionID = Hypercharge;
-
-                if (WasLastAction(BlazingShot) && OpenerStep == 16) OpenerStep++;
-                else if (OpenerStep == 16) actionID = BlazingShot;
-
-                if (WasLastAction(CheckMate) && OpenerStep == 17) OpenerStep++;
-                else if (OpenerStep == 17) actionID = CheckMate;
-
-                if (WasLastAction(BlazingShot) && OpenerStep == 18) OpenerStep++;
-                else if (OpenerStep == 18) actionID = BlazingShot;
-
-                if (WasLastAction(DoubleCheck) && OpenerStep == 19) OpenerStep++;
-                else if (OpenerStep == 19) actionID = DoubleCheck;
-
-                if (WasLastAction(BlazingShot) && OpenerStep == 20) OpenerStep++;
-                else if (OpenerStep == 20) actionID = BlazingShot;
-
-                if (WasLastAction(CheckMate) && OpenerStep == 21) OpenerStep++;
-                else if (OpenerStep == 21) actionID = CheckMate;
-
-                if (WasLastAction(BlazingShot) && OpenerStep == 22) OpenerStep++;
-                else if (OpenerStep == 22) actionID = BlazingShot;
-
-                if (WasLastAction(DoubleCheck) && OpenerStep == 23) OpenerStep++;
-                else if (OpenerStep == 23) actionID = DoubleCheck;
-
-                if (WasLastAction(BlazingShot) && OpenerStep == 24) OpenerStep++;
-                else if (OpenerStep == 24) actionID = BlazingShot;
-
-                if (WasLastAction(CheckMate) && OpenerStep == 25) OpenerStep++;
-                else if (OpenerStep == 25) actionID = CheckMate;
-
-                if (WasLastAction(Drill) && OpenerStep == 26) OpenerStep++;
-                else if (OpenerStep == 26) actionID = Drill;
-
-                if (WasLastAction(DoubleCheck) && OpenerStep == 27) OpenerStep++;
-                else if (OpenerStep == 27) actionID = DoubleCheck;
-
-                if (WasLastAction(CheckMate) && OpenerStep == 28) OpenerStep++;
-                else if (OpenerStep == 28) actionID = CheckMate;
-
-                if (WasLastAction(HeatedSplitShot) && OpenerStep == 29) OpenerStep++;
-                else if (OpenerStep == 29) actionID = HeatedSplitShot;
-
-                if (WasLastAction(DoubleCheck) && OpenerStep == 30) OpenerStep++;
-                else if (OpenerStep == 30) actionID = DoubleCheck;
-
-                if (WasLastAction(HeatedSlugShot) && OpenerStep == 31) OpenerStep++;
-                else if (OpenerStep == 31) actionID = HeatedSlugShot;
-
-                if (WasLastAction(HeatedCleanShot) && OpenerStep == 32) CurrentState = OpenerState.OpenerFinished;
-                else if (OpenerStep == 32) actionID = HeatedCleanShot;
+                //FRU Opener
+                if (currentZoneID == 1238)
+                {
+                    doTactOpener(ref actionID); 
+                }
+                else
+                {
+                    doStdOpener(ref actionID); 
+                }
 
                 if (ActionWatching.TimeSinceLastAction.TotalSeconds >= 5)
                     CurrentState = OpenerState.FailedOpener;
@@ -310,7 +232,212 @@ internal partial class MCH
 
             return false;
         }
+
+        public void doTactOpener(ref uint actionID)
+        {
+            if (WasLastAction(AirAnchor) && OpenerStep == 1) OpenerStep++;
+            else if (OpenerStep == 1) actionID = AirAnchor;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 2) OpenerStep++;
+            else if (OpenerStep == 2) actionID = CheckMate;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 3) OpenerStep++;
+            else if (OpenerStep == 3) actionID = DoubleCheck;
+
+            if (WasLastAction(Drill) && OpenerStep == 4) OpenerStep++;
+            else if (OpenerStep == 4) actionID = Drill;
+
+            if (WasLastAction(BarrelStabilizer) && OpenerStep == 5) OpenerStep++;
+            else if (OpenerStep == 5) actionID = BarrelStabilizer;
+
+            if (WasLastAction(Chainsaw) && OpenerStep == 6) OpenerStep++;
+            else if (OpenerStep == 6) actionID = Chainsaw;
+            
+            if (WasLastAction(Tactician) && OpenerStep == 7) OpenerStep++;
+            else if (OpenerStep == 7) actionID = Tactician;
+
+            if (WasLastAction(Excavator) && OpenerStep == 8) OpenerStep++;
+            else if (OpenerStep == 8) actionID = Excavator;
+
+            if (WasLastAction(AutomatonQueen) && OpenerStep == 9) OpenerStep++;
+            else if (OpenerStep == 9) actionID = AutomatonQueen;
+
+            if (WasLastAction(Reassemble) && OpenerStep == 10) OpenerStep++;
+            else if (OpenerStep == 10) actionID = Reassemble;
+
+            if (WasLastAction(Drill) && OpenerStep == 11) OpenerStep++;
+            else if (OpenerStep == 11) actionID = Drill;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 12) OpenerStep++;
+            else if (OpenerStep == 12) actionID = CheckMate;
+
+            if (WasLastAction(Wildfire) && OpenerStep == 13) OpenerStep++;
+            else if (OpenerStep == 13) actionID = Wildfire;
+
+            if (WasLastAction(FullMetalField) && OpenerStep == 14) OpenerStep++;
+            else if (OpenerStep == 14) actionID = FullMetalField;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 15) OpenerStep++;
+            else if (OpenerStep == 15) actionID = DoubleCheck;
+
+            if (WasLastAction(Hypercharge) && OpenerStep == 16) OpenerStep++;
+            else if (OpenerStep == 16) actionID = Hypercharge;
+
+            if (WasLastAction(BlazingShot) && OpenerStep == 17) OpenerStep++;
+            else if (OpenerStep == 17) actionID = BlazingShot;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 18) OpenerStep++;
+            else if (OpenerStep == 18) actionID = CheckMate;
+
+            if (WasLastAction(BlazingShot) && OpenerStep == 19) OpenerStep++;
+            else if (OpenerStep == 19) actionID = BlazingShot;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 20) OpenerStep++;
+            else if (OpenerStep == 20) actionID = DoubleCheck;
+
+            if (WasLastAction(BlazingShot) && OpenerStep == 21) OpenerStep++;
+            else if (OpenerStep == 21) actionID = BlazingShot;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 22) OpenerStep++;
+            else if (OpenerStep == 22) actionID = CheckMate;
+
+            if (WasLastAction(BlazingShot) && OpenerStep == 23) OpenerStep++;
+            else if (OpenerStep == 23) actionID = BlazingShot;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 24) OpenerStep++;
+            else if (OpenerStep == 24) actionID = DoubleCheck;
+
+            if (WasLastAction(BlazingShot) && OpenerStep == 25) OpenerStep++;
+            else if (OpenerStep == 25) actionID = BlazingShot;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 26) OpenerStep++;
+            else if (OpenerStep == 26) actionID = CheckMate;
+
+            if (WasLastAction(Drill) && OpenerStep == 27) OpenerStep++;
+            else if (OpenerStep == 27) actionID = Drill;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 28) OpenerStep++;
+            else if (OpenerStep == 28) actionID = DoubleCheck;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 29) OpenerStep++;
+            else if (OpenerStep == 29) actionID = CheckMate;
+
+            if (WasLastAction(HeatedSplitShot) && OpenerStep == 30) OpenerStep++;
+            else if (OpenerStep == 30) actionID = HeatedSplitShot;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 31) OpenerStep++;
+            else if (OpenerStep == 31) actionID = DoubleCheck;
+
+            if (WasLastAction(HeatedSlugShot) && OpenerStep == 32) OpenerStep++;
+            else if (OpenerStep == 32) actionID = HeatedSlugShot;
+
+            if (WasLastAction(HeatedCleanShot) && OpenerStep == 33) CurrentState = OpenerState.OpenerFinished;
+            else if (OpenerStep == 33) actionID = HeatedCleanShot;
+        }
+
+
+        private void doStdOpener(ref uint actionID)
+        {
+            if (WasLastAction(AirAnchor) && OpenerStep == 1) OpenerStep++;
+            else if (OpenerStep == 1) actionID = AirAnchor;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 2) OpenerStep++;
+            else if (OpenerStep == 2) actionID = CheckMate;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 3) OpenerStep++;
+            else if (OpenerStep == 3) actionID = DoubleCheck;
+
+            if (WasLastAction(Drill) && OpenerStep == 4) OpenerStep++;
+            else if (OpenerStep == 4) actionID = Drill;
+
+            if (WasLastAction(BarrelStabilizer) && OpenerStep == 5) OpenerStep++;
+            else if (OpenerStep == 5) actionID = BarrelStabilizer;
+
+            if (WasLastAction(Chainsaw) && OpenerStep == 6) OpenerStep++;
+            else if (OpenerStep == 6) actionID = Chainsaw;
+
+            if (WasLastAction(Excavator) && OpenerStep == 7) OpenerStep++;
+            else if (OpenerStep == 7) actionID = Excavator;
+
+            if (WasLastAction(AutomatonQueen) && OpenerStep == 8) OpenerStep++;
+            else if (OpenerStep == 8) actionID = AutomatonQueen;
+
+            if (WasLastAction(Reassemble) && OpenerStep == 9) OpenerStep++;
+            else if (OpenerStep == 9) actionID = Reassemble;
+
+            if (WasLastAction(Drill) && OpenerStep == 10) OpenerStep++;
+            else if (OpenerStep == 10) actionID = Drill;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 11) OpenerStep++;
+            else if (OpenerStep == 11) actionID = CheckMate;
+
+            if (WasLastAction(Wildfire) && OpenerStep == 12) OpenerStep++;
+            else if (OpenerStep == 12) actionID = Wildfire;
+
+            if (WasLastAction(FullMetalField) && OpenerStep == 13) OpenerStep++;
+            else if (OpenerStep == 13) actionID = FullMetalField;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 14) OpenerStep++;
+            else if (OpenerStep == 14) actionID = DoubleCheck;
+
+            if (WasLastAction(Hypercharge) && OpenerStep == 15) OpenerStep++;
+            else if (OpenerStep == 15) actionID = Hypercharge;
+
+            if (WasLastAction(BlazingShot) && OpenerStep == 16) OpenerStep++;
+            else if (OpenerStep == 16) actionID = BlazingShot;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 17) OpenerStep++;
+            else if (OpenerStep == 17) actionID = CheckMate;
+
+            if (WasLastAction(BlazingShot) && OpenerStep == 18) OpenerStep++;
+            else if (OpenerStep == 18) actionID = BlazingShot;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 19) OpenerStep++;
+            else if (OpenerStep == 19) actionID = DoubleCheck;
+
+            if (WasLastAction(BlazingShot) && OpenerStep == 20) OpenerStep++;
+            else if (OpenerStep == 20) actionID = BlazingShot;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 21) OpenerStep++;
+            else if (OpenerStep == 21) actionID = CheckMate;
+
+            if (WasLastAction(BlazingShot) && OpenerStep == 22) OpenerStep++;
+            else if (OpenerStep == 22) actionID = BlazingShot;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 23) OpenerStep++;
+            else if (OpenerStep == 23) actionID = DoubleCheck;
+
+            if (WasLastAction(BlazingShot) && OpenerStep == 24) OpenerStep++;
+            else if (OpenerStep == 24) actionID = BlazingShot;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 25) OpenerStep++;
+            else if (OpenerStep == 25) actionID = CheckMate;
+
+            if (WasLastAction(Drill) && OpenerStep == 26) OpenerStep++;
+            else if (OpenerStep == 26) actionID = Drill;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 27) OpenerStep++;
+            else if (OpenerStep == 27) actionID = DoubleCheck;
+
+            if (WasLastAction(CheckMate) && OpenerStep == 28) OpenerStep++;
+            else if (OpenerStep == 28) actionID = CheckMate;
+
+            if (WasLastAction(HeatedSplitShot) && OpenerStep == 29) OpenerStep++;
+            else if (OpenerStep == 29) actionID = HeatedSplitShot;
+
+            if (WasLastAction(DoubleCheck) && OpenerStep == 30) OpenerStep++;
+            else if (OpenerStep == 30) actionID = DoubleCheck;
+
+            if (WasLastAction(HeatedSlugShot) && OpenerStep == 31) OpenerStep++;
+            else if (OpenerStep == 31) actionID = HeatedSlugShot;
+
+            if (WasLastAction(HeatedCleanShot) && OpenerStep == 32) CurrentState = OpenerState.OpenerFinished;
+            else if (OpenerStep == 32) actionID = HeatedCleanShot;
+        }
+        
+        
     }
+
 
     internal static class MCHHelper
     {
