@@ -160,7 +160,7 @@ internal partial class MCH
             return false;
         }
 
-        private bool DoOpener(ref uint actionID)
+        private bool DoOpener(ref uint actionID, ref uint TerritoryType)
         {
             if (!LevelChecked)
                 return false;
@@ -168,7 +168,7 @@ internal partial class MCH
             if (currentState == OpenerState.InOpener)
             {
                 //FRU Opener
-                if (Svc.ClientState.TerritoryType == 1238)
+                if (TerritoryType == 1238)
                 {
                     doFRUOpener(ref actionID); 
                 }
@@ -206,7 +206,7 @@ internal partial class MCH
             OpenerStep = 0;
         }
 
-        public bool DoFullOpener(ref uint actionID)
+        public bool DoFullOpener(ref uint actionID, ref uint TerritoryType)
         {
             if (!LevelChecked)
                 return false;
@@ -216,7 +216,7 @@ internal partial class MCH
                     return true;
 
             if (CurrentState == OpenerState.InOpener)
-                if (DoOpener(ref actionID))
+                if (DoOpener(ref actionID, ref TerritoryType))
                     return true;
 
             if (!InCombat())

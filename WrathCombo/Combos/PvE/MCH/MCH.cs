@@ -1,3 +1,4 @@
+using ECommons.DalamudServices;
 using WrathCombo.Combos.PvE.Content;
 using WrathCombo.CustomComboNS;
 using WrathCombo.Data;
@@ -7,10 +8,11 @@ namespace WrathCombo.Combos.PvE;
 
 internal partial class MCH
 {
+    protected static uint TerritoryType = Svc.ClientState.TerritoryType;
     internal class MCH_ST_SimpleMode : CustomCombo
     {
         protected internal override CustomComboPreset Preset { get; } = CustomComboPreset.MCH_ST_SimpleMode;
-
+        
         protected override uint Invoke(uint actionID, uint lastComboMove, float comboTime, byte level)
         {
             // Don't change anything if not basic skill
@@ -29,7 +31,7 @@ internal partial class MCH
                 return Variant.VariantRampart;
 
             // Opener
-            if (MCHOpener.DoFullOpener(ref actionID))
+            if (MCHOpener.DoFullOpener(ref actionID, ref TerritoryType))
                 return actionID;
 
             //Reassemble to start before combat
@@ -173,7 +175,7 @@ internal partial class MCH
 
             // Opener
             if (IsEnabled(CustomComboPreset.MCH_ST_Adv_Opener))
-                if (MCHOpener.DoFullOpener(ref actionID))
+                if (MCHOpener.DoFullOpener(ref actionID, ref TerritoryType))
                     return actionID;
 
             //Reassemble to start before combat
