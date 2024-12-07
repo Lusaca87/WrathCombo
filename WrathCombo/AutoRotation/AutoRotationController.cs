@@ -102,7 +102,6 @@ namespace WrathCombo.AutoRotation
                 if (action.IsHeal)
                 {
                     if (!AutomateHealing(preset.Key, attributes, gameAct) && Svc.Targets.Target != null && !Svc.Targets.Target.IsHostile() && Environment.TickCount64 > LastHealAt + 1000)
-                        Svc.Targets.Target = null;
 
                     if ((healTarget != null && !action.IsAoE) || (aoeheal && action.IsAoE))
                         return;
@@ -117,6 +116,7 @@ namespace WrathCombo.AutoRotation
                     continue;
                 }
 
+                if (!action.IsHeal)
                 AutomateDPS(preset.Key, attributes, gameAct);
             }
 
@@ -320,6 +320,7 @@ namespace WrathCombo.AutoRotation
                             DPSRotationMode.Tank_Target => Svc.Targets.Target,
                             DPSRotationMode.Nearest => DPSTargeting.GetNearestTarget(),
                             DPSRotationMode.Furthest => DPSTargeting.GetFurthestTarget(),
+                            _ => Svc.Targets.Target,
                         };
                         return target;
                     }
@@ -335,6 +336,7 @@ namespace WrathCombo.AutoRotation
                             DPSRotationMode.Tank_Target => DPSTargeting.GetTankTarget(),
                             DPSRotationMode.Nearest => DPSTargeting.GetNearestTarget(),
                             DPSRotationMode.Furthest => DPSTargeting.GetFurthestTarget(),
+                            _ => Svc.Targets.Target,
                         };
                         return target;
                     }
@@ -347,8 +349,8 @@ namespace WrathCombo.AutoRotation
                         HealerRotationMode.Manual => HealerTargeting.ManualTarget(),
                         HealerRotationMode.Highest_Current => HealerTargeting.GetHighestCurrent(),
                         HealerRotationMode.Lowest_Current => HealerTargeting.GetLowestCurrent(),
+                        _ => HealerTargeting.ManualTarget(),
                     };
-
                     return target;
                 }
 
@@ -433,10 +435,12 @@ namespace WrathCombo.AutoRotation
                 var inRange = CustomComboFunctions.IsInLineOfSight(target) && CustomComboFunctions.InActionRange(outAct, target);
 
                 var canUse = canUseSelf || canUseTarget || areaTargeted;
+
+                if (canUse)
+                Svc.Targets.Target = target;
+
                 if (canUse && (inRange || areaTargeted))
                 {
-                    Svc.Targets.Target = target;
-
                     var ret = ActionManager.Instance()->UseAction(ActionType.Action, outAct, canUseTarget ? target.GameObjectId : Player.Object.GameObjectId);
                     if (mode is HealerRotationMode && ret)
                         LastHealAt = Environment.TickCount64 + castTime;
@@ -547,7 +551,7 @@ namespace WrathCombo.AutoRotation
                 if (Svc.Targets.Target == null) return null;
                 var t = Svc.Targets.Target;
                 bool goodToHeal = CustomComboFunctions.GetTargetHPPercent(t) <= (TargetHasRegen(t) ? Service.Configuration.RotationConfig.HealerSettings.SingleTargetRegenHPP : Service.Configuration.RotationConfig.HealerSettings.SingleTargetHPP);
-                if (goodToHeal)
+                if (goodToHeal && !t.IsHostile())
                 {
                     return t;
                 }
@@ -613,10 +617,12 @@ namespace WrathCombo.AutoRotation
 
             public static IGameObject? GetLowestMaxTarget()
             {
-                return DPSTargeting.BaseSelection
+                var t = DPSTargeting.BaseSelection
                     .OrderByDescending(x => x.TargetObject?.GameObjectId != Player.Object?.GameObjectId)
                     .OrderBy(x => (x as IBattleChara).MaxHp)
                     .ThenBy(x => CustomComboFunctions.GetTargetHPPercent(x)).FirstOrDefault();
+
+                return t;
             }
 
             public static IGameObject? GetHighestMaxTarget()

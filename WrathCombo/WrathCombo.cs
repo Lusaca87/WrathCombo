@@ -40,6 +40,7 @@ namespace WrathCombo
         private const string privateName = "Wrath Combo - Edit by Velvet";
 
         private readonly ConfigWindow ConfigWindow;
+        private readonly SettingChangeWindow SettingChangeWindow;
         private readonly TargetHelper TargetHelper;
         internal static WrathCombo? P = null!;
         internal WindowSystem ws;
@@ -113,9 +114,11 @@ namespace WrathCombo
             AST.InitCheckCards();
 
             ConfigWindow = new ConfigWindow();
+            SettingChangeWindow = new SettingChangeWindow();
             TargetHelper = new();
             ws = new();
             ws.AddWindow(ConfigWindow);
+            ws.AddWindow(SettingChangeWindow);
             ws.AddWindow(TargetHelper);
 
             Svc.PluginInterface.UiBuilder.Draw += ws.Draw;
@@ -226,7 +229,10 @@ namespace WrathCombo
             Service.Configuration.ResetFeatures("v3.1.1.0_DRGRework", Enumerable.Range(6000, 800).ToArray());
         }
 
-        private void DrawUI() => ConfigWindow.Draw();
+        private void DrawUI() {
+            SettingChangeWindow.Draw();
+            ConfigWindow.Draw();
+        }
 
         private void PrintLoginMessage()
         {
