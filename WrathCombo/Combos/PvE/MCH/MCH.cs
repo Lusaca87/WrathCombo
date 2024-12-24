@@ -1,7 +1,4 @@
-using System.Linq;
 using ECommons.DalamudServices;
-using ECommons.GameHelpers;
-using ECommons.Logging;
 using WrathCombo.Combos.PvE.Content;
 using WrathCombo.CustomComboNS;
 using WrathCombo.Data;
@@ -33,7 +30,6 @@ internal static partial class MCH
                 // Opener
                 if (TargetIsHostile())
                 {
-                    MCHOpenerMaxLevel1.TerritoryType = Svc.ClientState.TerritoryType;
                     if (Opener().FullOpener(ref actionID))
                         return actionID;
                 }
@@ -178,7 +174,7 @@ internal static partial class MCH
                 // Opener
                 if (IsEnabled(CustomComboPreset.MCH_ST_Adv_Opener))
                 {
-                   if(Svc.ClientState.TerritoryType == 341)
+                   if(Svc.ClientState.TerritoryType == 1238)
                        MCHOpenerMaxLevel1.AddTactToOpenerInSlot(7);
                       
                     else

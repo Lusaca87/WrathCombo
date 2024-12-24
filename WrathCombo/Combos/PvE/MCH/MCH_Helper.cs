@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Game.ClientState.JobGauge.Types;
-using ECommons.DalamudServices;
 using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using WrathCombo.CustomComboNS;
@@ -264,7 +263,7 @@ internal static partial class MCH
 
     internal class MCHOpenerMaxLevel1 : WrathOpener
     {
-        
+        //ToDo: Add Fallback - Opener, also change openerlevel and opener based on territoryType (instance) - territoryinfo will be applied on MCH.cs
         internal static uint TerritoryType { get; set; }
         private int GetOpenerLevel()
         {
@@ -390,7 +389,6 @@ internal static partial class MCH
                 CurrentOpener.OpenerActions.Insert(7, Tactician);
                 DuoLog.Information($"Added Tactician into opener on Actionslot {slot}");
             }
-                
         }
         
         public static void RemoveTactToOpenerInSlot(int slot)
@@ -400,7 +398,6 @@ internal static partial class MCH
                 CurrentOpener.OpenerActions.RemoveAt(slot);
                 DuoLog.Information($"Removed Tactician from opener on Actionslot {slot}");
             }
-                
         }
     }
 }
