@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Game.ClientState.JobGauge.Types;
+using ECommons.DalamudServices;
+using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using WrathCombo.CustomComboNS;
 using WrathCombo.CustomComboNS.Functions;
@@ -262,11 +264,17 @@ internal static partial class MCH
 
     internal class MCHOpenerMaxLevel1 : WrathOpener
     {
-        public override int MinOpenerLevel => 100;
-
-        public override int MaxOpenerLevel => 109;
-        public override List<uint> OpenerActions { get; set; } =
-        [
+        
+        internal static uint TerritoryType { get; set; }
+        private int GetOpenerLevel()
+        {
+            return 100;
+        }
+        public override int MinOpenerLevel => GetOpenerLevel();
+        
+        public override int MaxOpenerLevel => GetOpenerLevel()+9;
+        public override List<uint> OpenerActions { get; set; } = GetOpenerActions();
+        /*[
             Reassemble,
             AirAnchor,
             CheckMate,
@@ -300,7 +308,49 @@ internal static partial class MCH
             DoubleCheck,
             HeatedSlugShot,
             HeatedCleanShot
-        ];
+        ];*/
+
+        private static List<uint> GetOpenerActions()
+        {
+            List<uint> actions = new List<uint>()
+            {
+                Reassemble,
+                AirAnchor,
+                CheckMate,
+                DoubleCheck,
+                Drill,
+                BarrelStabilizer,
+                Chainsaw,
+                Excavator,
+                AutomatonQueen,
+                Reassemble,
+                Drill,
+                CheckMate,
+                Wildfire,
+                FullMetalField,
+                DoubleCheck,
+                Hypercharge,
+                BlazingShot,
+                CheckMate,
+                BlazingShot,
+                DoubleCheck,
+                BlazingShot,
+                CheckMate,
+                BlazingShot,
+                DoubleCheck,
+                BlazingShot,
+                CheckMate,
+                Drill,
+                DoubleCheck,
+                CheckMate,
+                HeatedSplitShot,
+                DoubleCheck,
+                HeatedSlugShot,
+                HeatedCleanShot
+            };
+            return actions;
+        }
+        
         internal override UserData? ContentCheckConfig => Config.MCH_Balance_Content;
 
         public override bool HasCooldowns()
@@ -323,13 +373,34 @@ internal static partial class MCH
             if (!ActionReady(BarrelStabilizer))
                 return false;
 
-            if (!ActionReady(Excavator))
+            //changes from Level 90 to 100 (TOP + DSR!)
+            if (LevelChecked(Excavator) && !ActionReady(Excavator))
                 return false;
 
-            if (!ActionReady(FullMetalField))
+            if (LevelChecked(FullMetalField) && !ActionReady(FullMetalField))
                 return false;
 
             return true;
+        }
+
+        public static void AddTactToOpenerInSlot(int slot)
+        {
+            if (CurrentOpener.OpenerActions[slot] != Tactician)
+            {
+                CurrentOpener.OpenerActions.Insert(7, Tactician);
+                DuoLog.Information($"Added Tactician into opener on Actionslot {slot}");
+            }
+                
+        }
+        
+        public static void RemoveTactToOpenerInSlot(int slot)
+        {
+            if (CurrentOpener.OpenerActions[slot] == Tactician)
+            {
+                CurrentOpener.OpenerActions.RemoveAt(slot);
+                DuoLog.Information($"Removed Tactician from opener on Actionslot {slot}");
+            }
+                
         }
     }
 }

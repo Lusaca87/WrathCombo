@@ -1,3 +1,7 @@
+using System.Linq;
+using ECommons.DalamudServices;
+using ECommons.GameHelpers;
+using ECommons.Logging;
 using WrathCombo.Combos.PvE.Content;
 using WrathCombo.CustomComboNS;
 using WrathCombo.Data;
@@ -28,9 +32,11 @@ internal static partial class MCH
 
                 // Opener
                 if (TargetIsHostile())
+                {
+                    MCHOpenerMaxLevel1.TerritoryType = Svc.ClientState.TerritoryType;
                     if (Opener().FullOpener(ref actionID))
                         return actionID;
-
+                }
                 //Reassemble to start before combat
                 if (!HasEffect(Buffs.Reassembled) && ActionReady(Reassemble) &&
                     !InCombat() && TargetIsHostile())
@@ -170,9 +176,20 @@ internal static partial class MCH
                     return Variant.VariantRampart;
 
                 // Opener
-                if (IsEnabled(CustomComboPreset.MCH_ST_Adv_Opener) && TargetIsHostile())
-                    if (Opener().FullOpener(ref actionID))
-                        return actionID;
+                if (IsEnabled(CustomComboPreset.MCH_ST_Adv_Opener))
+                {
+                   if(Svc.ClientState.TerritoryType == 341)
+                       MCHOpenerMaxLevel1.AddTactToOpenerInSlot(7);
+                      
+                    else
+                        MCHOpenerMaxLevel1.RemoveTactToOpenerInSlot(7);
+                   
+                    if (TargetIsHostile())
+                    {
+                        if (Opener().FullOpener(ref actionID))
+                            return actionID;
+                    }
+                }
 
                 //Reassemble to start before combat
                 if (IsEnabled(CustomComboPreset.MCH_ST_Adv_Reassemble) &&
