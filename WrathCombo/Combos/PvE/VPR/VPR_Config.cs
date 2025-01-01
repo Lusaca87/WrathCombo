@@ -1,11 +1,7 @@
-#region
-
 using WrathCombo.Combos.PvP;
 using WrathCombo.CustomComboNS.Functions;
 using WrathCombo.Extensions;
 using static WrathCombo.Window.Functions.UserConfig;
-
-#endregion
 
 namespace WrathCombo.Combos.PvE;
 
@@ -88,8 +84,8 @@ internal static partial class VPR
                     DrawRadioButton(VPR_ReawakenLegacyButton, $"Replaces {Reawaken.ActionName()}",
                         $"Replaces {Reawaken.ActionName()} with Full Generation - Legacy combo.", 0);
 
-                    DrawRadioButton(VPR_ReawakenLegacyButton, $"Replaces {SteelFangs.ActionName()}",
-                        $"Replaces {SteelFangs.ActionName()} with Full Generation - Legacy combo.", 1);
+                    DrawRadioButton(VPR_ReawakenLegacyButton, $"Replaces {ReavingFangs.ActionName()}",
+                        $"Replaces {ReavingFangs.ActionName()} with Full Generation - Legacy combo.", 1);
 
                     break;
 

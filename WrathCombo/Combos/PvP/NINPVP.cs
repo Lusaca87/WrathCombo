@@ -64,7 +64,7 @@ namespace WrathCombo.Combos.PvP
         {
             protected internal override CustomComboPreset Preset { get; } = CustomComboPreset.NINPvP_ST_BurstMode;
 
-            protected override uint Invoke(uint actionID, uint lastComboActionID, float comboTime, byte level)
+            protected override uint Invoke(uint actionID)
             {
                 if (actionID is SpinningEdge or GustSlash or AeolianEdge)
                 {
@@ -89,9 +89,8 @@ namespace WrathCombo.Combos.PvP
                     {
 
                         // Seiton Tenchu priority for targets below 50% HP
-                        if (IsEnabled(CustomComboPreset.NINPvP_ST_SeitonTenchu) && 
-                            (GetTargetHPPercent() < GetOptionValue(Config.NINPVP_SeitonTenchu) && IsLB1Ready || //Limit Break
-                            HasEffect(Buffs.SeitonUnsealed)))  // Limit Break followup not tied to health slider
+                        if (IsEnabled(CustomComboPreset.NINPvP_ST_SeitonTenchu) && GetTargetHPPercent() < GetOptionValue(Config.NINPVP_SeitonTenchu) &&
+                            (IsLB1Ready || HasEffect(Buffs.SeitonUnsealed)))  // Limit Break or Unsealed buff
                             return OriginalHook(SeitonTenchu);
 
                         // Zesho Meppo
@@ -154,7 +153,7 @@ namespace WrathCombo.Combos.PvP
         {
             protected internal override CustomComboPreset Preset { get; } = CustomComboPreset.NINPvP_AoE_BurstMode;
 
-            protected override uint Invoke(uint actionID, uint lastComboActionID, float comboTime, byte level)
+            protected override uint Invoke(uint actionID)
             {
                 if (actionID == FumaShuriken)
                 {
@@ -217,10 +216,10 @@ namespace WrathCombo.Combos.PvP
 
                         if (InMeleeRange()) // Melee Combo
                         {
-                            if (lastComboActionID == GustSlash)
+                            if (ComboAction == GustSlash)
                                 return OriginalHook(AeolianEdge);
 
-                            if (lastComboActionID == SpinningEdge)
+                            if (ComboAction == SpinningEdge)
                                 return OriginalHook(GustSlash);
 
                             return OriginalHook(SpinningEdge);

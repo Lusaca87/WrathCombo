@@ -36,10 +36,10 @@ namespace WrathCombo.Window.Tabs
         internal class DebugCombo : CustomCombo
         {
             protected internal override CustomComboPreset Preset { get; }
-            protected override uint Invoke(uint actionID, uint lastComboActionID, float comboTime, byte level) => actionID;
+            protected override uint Invoke(uint actionID) => actionID;
         }
 
-        internal static Lumina.Excel.Sheets.Action? debugSpell;
+        internal static Action? debugSpell;
         internal unsafe static new void Draw()
         {
             DebugCombo? comboClass = new();
@@ -78,7 +78,7 @@ namespace WrathCombo.Window.Tabs
                         // Null Check (Status Name)
                         if (!string.IsNullOrEmpty(ActionWatching.GetStatusName(status.StatusId)))
                         {
-                            CustomStyleText(ActionWatching.GetStatusName(status.StatusId) + ":", status.StatusId);
+                            CustomStyleText(ActionWatching.GetStatusName(status.StatusId) + ":", $"{status.StatusId} P: {status.Param}");
                         }
                         else CustomStyleText("", status.StatusId);
 
@@ -157,7 +157,7 @@ namespace WrathCombo.Window.Tabs
                             var cjc = Svc.Data.Excel.GetRawSheet("ClassJobCategory");
                             var cjcColumIdx = cjc.Columns[(int)JobID.Value];
 
-                            foreach (var act in Svc.Data.GetExcelSheet<Action>()!.Where(x => x.IsPlayerAction && (x.ClassJob.RowId == classId || x.ClassJob.RowId == JobID.Value)).OrderBy(x => x.ClassJobLevel))
+                            foreach (var act in Svc.Data.GetExcelSheet<Action>()!.Where(x => x.IsPlayerAction && x.ClassJobCategory.Value.IsJobInCategory(Player.Job)).OrderBy(x => x.ClassJobLevel))
                             {
                                 if (ImGui.Selectable($"({act.RowId}) Lv.{act.ClassJobLevel}. {act.Name} - {(act.IsPvP ? "PvP" : "Normal")}", debugSpell?.RowId == act.RowId))
                                 {
@@ -179,10 +179,12 @@ namespace WrathCombo.Window.Tabs
                         if (debugSpell.Value.UnlockLink.RowId != 0)
                             CustomStyleText($"Quest:", $"{Svc.Data.GetExcelSheet<Quest>().GetRow(debugSpell.Value.UnlockLink.RowId).Name} ({(UIState.Instance()->IsUnlockLinkUnlockedOrQuestCompleted(debugSpell.Value.UnlockLink.RowId) ? "Completed" : "Not Completed")})");
                         CustomStyleText($"Base Recast:", $"{debugSpell.Value.Recast100ms / 10f}s");
+                        CustomStyleText("Original Hook:", OriginalHook(debugSpell.Value.RowId).ActionName());
                         CustomStyleText($"Cooldown Total:", $"{ActionManager.Instance()->GetRecastTime(ActionType.Action, debugSpell.Value.RowId)}");
                         CustomStyleText($"Current Cooldown:", GetCooldown(debugSpell.Value.RowId).CooldownRemaining);
                         CustomStyleText($"Current Cast Time:", ActionManager.GetAdjustedCastTime(ActionType.Action, debugSpell.Value.RowId));
                         CustomStyleText($"Max Charges:", $"{debugSpell.Value.MaxCharges}");
+                        CustomStyleText($"Charges (Level):", $"{GetCooldown(debugSpell.Value.RowId).MaxCharges}");
                         CustomStyleText($"Range:", $"{ActionWatching.GetActionRange(debugSpell.Value.RowId)}");
                         CustomStyleText($"Effect Range:", $"{debugSpell.Value.EffectRange}");
                         CustomStyleText($"Can Target Hostile:", $"{debugSpell.Value.CanTargetHostile}");
@@ -191,7 +193,7 @@ namespace WrathCombo.Window.Tabs
                         CustomStyleText($"Can Target Party:", $"{debugSpell.Value.CanTargetParty}");
                         CustomStyleText($"Can Target Area:", $"{debugSpell.Value.TargetArea}");
                         CustomStyleText($"Cast Type:", $"{debugSpell.Value.CastType}");
-                        CustomStyleText("Can Queue:", $"{ActionWatching.canQueueAction.Original(ActionManager.Instance(), 1, debugSpell.Value.RowId)}");
+                        CustomStyleText("Can Queue:", $"{CanQueue(debugSpell.Value.RowId)}");
                         if (debugSpell.Value.EffectRange > 0)
                             CustomStyleText($"Targets Hit:", $"{NumberOfEnemiesInRange(debugSpell.Value.RowId, CurrentTarget)}");
 
@@ -234,8 +236,8 @@ namespace WrathCombo.Window.Tabs
                 CustomStyleText("LB Level:", LimitBreakLevel);
                 CustomStyleText("LB Action:", LimitBreakAction.ActionName());
                 CustomStyleText("Animation Lock:", ActionManager.Instance()->AnimationLock);
-                CustomStyleText("Queued Action:", $"{ActionManager.Instance()->QueuedActionId.ActionName()}");
                 CustomStyleText("Movement Timer:", TimeMoving.ToString("mm\\:ss\\:ff"));
+                CustomStyleText("Alliance Group:", GetAllianceGroup());
                 ImGui.Spacing();
 
                 ImGui.Spacing();
@@ -360,6 +362,7 @@ namespace WrathCombo.Window.Tabs
                 CustomStyleText("Cast Time:", $"{LocalPlayer.CurrentCastTime:F2} / {LocalPlayer.TotalCastTime:F2}");
                 CustomStyleText("Cast Action:", LocalPlayer.CastActionId == 0 ? string.Empty : $"{(string.IsNullOrEmpty(ActionWatching.GetActionName(LocalPlayer.CastActionId)) ? "Unknown" : ActionWatching.GetActionName(LocalPlayer.CastActionId))} (ID: {LocalPlayer.CastActionId})");
                 CustomStyleText("Animation Lock:", $"{ActionManager.Instance()->AnimationLock:F1}");
+                CustomStyleText("Queued Action:", ActionManager.Instance()->QueuedActionId.ActionName());
                 ImGui.Spacing();
 
                 // Party Info
@@ -371,13 +374,12 @@ namespace WrathCombo.Window.Tabs
                 if (ImGui.CollapsingHeader("Party Members"))
                 {
                     ImGui.Indent();
-                    for (int i = 1; i <= 8; i++)
+                    foreach (var member in GetPartyMembers())
                     {
-                        if (GetPartySlot(i) is not IBattleChara member || member is null) continue;
                         if (ImGui.CollapsingHeader(member.Name.ToString()))
                         {
-                            CustomStyleText("Slot:", i);
                             CustomStyleText("Job:", member.ClassJob.Value.Abbreviation);
+                            CustomStyleText($"HP:", $"{member.CurrentHp}/{member.MaxHp}");
                             CustomStyleText("Dead Timer:", TimeSpentDead(member.GameObjectId));
                         }
                     }
@@ -407,6 +409,8 @@ namespace WrathCombo.Window.Tabs
                         CustomStyleText($"Can Delayed Weave:", CanDelayedWeave(end: 0.1));
                     }
                 }
+
+                CustomStyleText("Countdown Remaining:", $"{CountdownActive} {CountdownRemaining}");
             }
 
             else

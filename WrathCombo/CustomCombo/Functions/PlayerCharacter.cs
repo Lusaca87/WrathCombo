@@ -1,13 +1,19 @@
-﻿using Dalamud.Game.ClientState.Conditions;
+﻿using System;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Memory;
 using ECommons.DalamudServices;
 using ECommons.GameFunctions;
+using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game.Fate;
+using FFXIVClientStructs.FFXIV.Client.Game.Group;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
-using Lumina.Excel.Sheets;
+using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using System.Linq;
 using WrathCombo.Combos.PvE;
+using Action = Lumina.Excel.Sheets.Action;
 using GameMain = FFXIVClientStructs.FFXIV.Client.Game.GameMain;
 
 namespace WrathCombo.CustomComboNS.Functions
@@ -78,6 +84,25 @@ namespace WrathCombo.CustomComboNS.Functions
             }
 
             return false;
+        }
+
+        public unsafe static AllianceGroup GetAllianceGroup()
+        {
+            if (GroupManager.Instance()->MainGroup.IsAlliance)
+            {
+                var array = UIModule.Instance()->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder.StringArrays[3]->StringArray[4];
+                var str = MemoryHelper.ReadSeStringNullTerminated(new System.IntPtr(array));
+                var lastChar = str.TextValue.Last();
+
+                return lastChar switch
+                {
+                    'A' => AllianceGroup.GroupA,
+                    'B' => AllianceGroup.GroupB,
+                    'C' => AllianceGroup.GroupC,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+            }
+            return AllianceGroup.NotInAlliance;
         }
     }
 }

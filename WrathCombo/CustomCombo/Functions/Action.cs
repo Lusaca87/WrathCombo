@@ -206,6 +206,13 @@ namespace WrathCombo.CustomComboNS.Functions
             return (RemainingGCD > weaveTime) || (HasSilence() && HasPacification());
         }
 
+        // This overload exists to prevent actionID uint from compiling
+        [Obsolete("ActionID (uint) is not allowed. Use time (double) instead.", true)]
+        public static bool CanWeave(uint value)
+        {
+            return false;
+        }
+
         /// <summary> Checks if the provided actionID has enough cooldown remaining to weave against it without causing clipping and checks if you're casting a spell. </summary>
         /// <param name="weaveTime"> Time when weaving window is over. Defaults to 0.6. </param>
         /// 
@@ -221,6 +228,13 @@ namespace WrathCombo.CustomComboNS.Functions
             return false;
         }
 
+        // This overload exists to prevent actionID uint from compiling
+        [Obsolete("ActionID (uint) is not allowed. Use time (double) instead.", true)]
+        public static bool CanSpellWeave(uint value)
+        {
+            return false;
+        }
+
         /// <summary> Checks if the provided actionID has enough cooldown remaining to weave against it in the later portion of the GCD without causing clipping. </summary>
         /// <param name="start"> Time (in seconds) to start to check for the weave window. If this value is greater than half of a GCD, it will instead use half a GCD instead to ensure it lands in the latter half.</param>
         /// <param name="end"> Time (in seconds) to end the check for the weave window. </param>
@@ -230,6 +244,13 @@ namespace WrathCombo.CustomComboNS.Functions
         {
             var halfGCD = GCDTotal / 2f;
             return RemainingGCD <= (start > halfGCD ? halfGCD : start) && RemainingGCD >= end;
+        }
+
+        // This overload exists to prevent actionID uint from compiling
+        [Obsolete("ActionID (uint) is not allowed. Use time (double) instead.", true)]
+        public static unsafe bool CanDelayedWeave(uint value)
+        {
+            return false;
         }
 
         /// <summary>
@@ -251,14 +272,14 @@ namespace WrathCombo.CustomComboNS.Functions
         {
             bool original = ActionWatching.canQueueAction.Original(ActionManager.Instance(), (uint)ActionType.Action, actionID);
             bool alreadyQueued = ActionManager.Instance()->QueuedActionId != 0;
-            bool inSlidecast = (LocalPlayer.TotalCastTime - LocalPlayer.CurrentCastTime) <= 0.4f;
+            bool inSlidecast = (LocalPlayer.TotalCastTime - LocalPlayer.CurrentCastTime) <= 0.5f;
             bool animLocked = ActionManager.Instance()->AnimationLock > 0;
-            bool recast = GetCooldown(actionID).CooldownRemaining <= 0.4f || GetCooldown(actionID).RemainingCharges > 0;
+            bool recast = GetCooldown(actionID).CooldownRemaining <= 0.5f || GetCooldown(actionID).RemainingCharges > 0;
             bool classCheck = ActionManager.Instance()->GetActionStatus(ActionType.Action, actionID) != 574;
 
-            var ret = original && !alreadyQueued && inSlidecast && !animLocked && recast && classCheck;
-
-            return ret || ActionManager.Instance()->GetActionStatus(ActionType.Action, actionID) == 0;
+            var ret = !alreadyQueued && inSlidecast && !animLocked && recast && classCheck;
+            var status = ActionManager.Instance()->GetActionStatus(ActionType.Action, actionID);
+            return ret && status is 0 or 582;
         }
     }
 }

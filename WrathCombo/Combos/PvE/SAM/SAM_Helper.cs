@@ -1,15 +1,12 @@
-﻿#region
-
+﻿using Dalamud.Game.ClientState.JobGauge.Types;
+using FFXIVClientStructs.FFXIV.Client.Game;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Dalamud.Game.ClientState.JobGauge.Types;
-using FFXIVClientStructs.FFXIV.Client.Game;
 using WrathCombo.CustomComboNS;
 using WrathCombo.CustomComboNS.Functions;
 using WrathCombo.Data;
 using static WrathCombo.CustomComboNS.Functions.CustomComboFunctions;
-
-#endregion
 
 namespace WrathCombo.Combos.PvE;
 
@@ -20,11 +17,15 @@ internal static partial class SAM
 
     internal static int MeikyoUsed => ActionWatching.CombatActions.Count(x => x == MeikyoShisui);
 
-    internal static bool trueNorthReady =>
+    internal static bool TrueNorthReady =>
         TargetNeedsPositionals() && ActionReady(All.TrueNorth) &&
         !HasEffect(All.Buffs.TrueNorth);
 
     internal static float GCD => GetCooldown(Hakaze).CooldownTotal;
+
+    internal static int SenCount => GetSenCount();
+
+    internal static bool ComboStarted => GetComboStarted();
 
     internal static WrathOpener Opener()
     {
@@ -34,43 +35,44 @@ internal static partial class SAM
         return WrathOpener.Dummy;
     }
 
-    internal static class SAMHelper
+    private static int GetSenCount()
     {
-        internal static int SenCount => GetSenCount();
+        int senCount = 0;
+        if (gauge.HasGetsu)
+            senCount++;
+        if (gauge.HasSetsu)
+            senCount++;
+        if (gauge.HasKa)
+            senCount++;
 
-        internal static bool ComboStarted => GetComboStarted();
+        return senCount;
+    }
 
-        private static int GetSenCount()
+    private static unsafe bool GetComboStarted()
+    {
+        uint comboAction = ActionManager.Instance()->Combo.Action;
+
+        return comboAction == OriginalHook(Hakaze) ||
+               comboAction == OriginalHook(Jinpu) ||
+               comboAction == OriginalHook(Shifu);
+    }
+
+    internal static bool UseMeikyo()
+    {
+        int usedMeikyo = MeikyoUsed % 15;
+
+        if (ActionReady(MeikyoShisui) && !ComboStarted)
         {
-            int senCount = 0;
-            if (gauge.HasGetsu) senCount++;
-            if (gauge.HasSetsu) senCount++;
-            if (gauge.HasKa) senCount++;
+            //if no opener/before lvl 100
+            if ((IsNotEnabled(CustomComboPreset.SAM_ST_Opener) ||
+                !LevelChecked(TendoSetsugekka) ||
+                (IsEnabled(CustomComboPreset.SAM_ST_Opener) && Config.SAM_Balance_Content == 1 && !InBossEncounter())) &&
+                MeikyoUsed < 2 && !HasEffect(Buffs.MeikyoShisui) && !HasEffect(Buffs.TsubameReady))
+                return true;
 
-            return senCount;
-        }
-
-        private static unsafe bool GetComboStarted()
-        {
-            uint comboAction = ActionManager.Instance()->Combo.Action;
-
-            return comboAction == OriginalHook(Hakaze) ||
-                   comboAction == OriginalHook(Jinpu) ||
-                   comboAction == OriginalHook(Shifu);
-        }
-
-        internal static bool UseMeikyo()
-        {
-            int usedMeikyo = MeikyoUsed % 15;
-
-            if (ActionReady(MeikyoShisui) && !ComboStarted)
+            if (MeikyoUsed >= 2)
             {
-                //if no opener/before lvl 100
-                if ((IsNotEnabled(CustomComboPreset.SAM_ST_Opener) || !LevelChecked(TendoSetsugekka)) &&
-                    MeikyoUsed < 2 && !HasEffect(Buffs.MeikyoShisui) && !HasEffect(Buffs.TsubameReady))
-                    return true;
-
-                if (MeikyoUsed >= 2)
+                if (LevelChecked(Ikishoten))
                 {
                     if (GetCooldownRemainingTime(Ikishoten) is > 45 and < 71) //1min windows
                         switch (usedMeikyo)
@@ -93,10 +95,13 @@ internal static partial class SAM
                     if (usedMeikyo is 7 or 14 && !HasEffect(Buffs.MeikyoShisui))
                         return true;
                 }
-            }
 
-            return false;
+                if (!LevelChecked(Ikishoten))
+                    return true;
+            }
         }
+
+        return false;
     }
 
     internal class SAMOpenerMaxLevel1 : WrathOpener
@@ -134,6 +139,11 @@ internal static partial class SAM
             TendoKaeshiSetsugekka
         ];
         internal override UserData? ContentCheckConfig => Config.SAM_Balance_Content;
+
+        public override List<(int [] Steps, int HoldDelay)> PrepullDelays { get; set; } =
+            [
+            ([2], 14),
+            ];
 
         public override bool HasCooldowns()
         {

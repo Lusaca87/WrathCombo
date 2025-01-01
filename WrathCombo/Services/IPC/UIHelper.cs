@@ -133,7 +133,8 @@ public class UIHelper(ref Leasing leasing, ref Search search)
                 ? _leasing.CombosUpdated
                 : _leasing.OptionsUpdated ?? DateTime.MinValue);
 
-        if (_presetsUpdated != presetsUpdated)
+        if (_presetsUpdated != presetsUpdated &&
+            _presetsUpdated is not null)
             PresetsControlled.Clear();
 
         // Return the cached value if it is valid, fastest
@@ -386,8 +387,7 @@ public class UIHelper(ref Leasing leasing, ref Search search)
     {
         bool DefaultUI(string label, ref bool backupVar)
         {
-            return ImGui.Checkbox(
-                label.Contains("Auto") ? "Auto-Mode" : label, ref backupVar);
+            return ImGui.Checkbox(label, ref backupVar);
         }
 
         (string controllers, bool state)? controlled = null;
@@ -456,14 +456,10 @@ public class UIHelper(ref Leasing leasing, ref Search search)
         ImGui.SameLine();
 
         if (forPreset is null)
-        {
             ImGuiHelpers.SafeTextColoredWrapped(ImGuiColors.DalamudGrey, label);
-        }
         else
-        {
             ImGuiHelpers.SafeTextColoredWrapped(ImGuiColors.DalamudGrey,
-                label.Contains("Auto") ? "Auto-Mode" : label.Split('#')[0]);
-        }
+                label.Contains("Auto") ? "" : label.Split('#')[0]);
 
         ImGui.PopStyleColor(2);
         ImGui.EndGroup();

@@ -1,4 +1,5 @@
-﻿using ECommons.DalamudServices;
+﻿using Dalamud.Game.ClientState.Conditions;
+using ECommons.DalamudServices;
 using ECommons.GameHelpers;
 using ECommons.Logging;
 using System;
@@ -10,6 +11,7 @@ using WrathCombo.CustomComboNS.Functions;
 using WrathCombo.Data;
 using WrathCombo.Extensions;
 using WrathCombo.Services;
+using static WrathCombo.CustomComboNS.Functions.CustomComboFunctions;
 
 namespace WrathCombo.CustomComboNS
 {
@@ -39,7 +41,14 @@ namespace WrathCombo.CustomComboNS
                     return;
                 }
 
+                PreviousOpenerAction = CurrentOpenerAction;
                 CurrentOpenerAction = OpenerActions[OpenerStep - 1];
+
+                if (CurrentOpenerAction == All.TrueNorth && !TargetNeedsPositionals())
+                {
+                    OpenerStep++;
+                    CurrentOpenerAction = OpenerActions[OpenerStep - 1];
+                }
             }
         }
 
@@ -56,27 +65,33 @@ namespace WrathCombo.CustomComboNS
                         Svc.Log.Debug($"Opener Not Ready");
 
                     if (value == OpenerState.OpenerReady)
+                    {
                         if (Service.Configuration.OutputOpenerLogs)
                             DuoLog.Information("Opener Now Ready");
                         else
                             Svc.Log.Debug($"Opener Now Ready");
+                    }
 
-                    if (value == OpenerState.OpenerFinished || value == OpenerState.FailedOpener)
+                    if (value == OpenerState.FailedOpener)
                     {
-                        if (value == OpenerState.FailedOpener)
-                            if (Service.Configuration.OutputOpenerLogs)
-                                DuoLog.Error($"Opener Failed at step {OpenerStep}, {CurrentOpenerAction.ActionName()}");
-                            else
-                                Svc.Log.Information($"Opener Failed at step {OpenerStep}, {CurrentOpenerAction.ActionName()}");
+                        if (Service.Configuration.OutputOpenerLogs)
+                            DuoLog.Error($"Opener Failed at step {OpenerStep}, {CurrentOpenerAction.ActionName()}");
+                        else
+                            Svc.Log.Information($"Opener Failed at step {OpenerStep}, {CurrentOpenerAction.ActionName()}");
 
                         ResetOpener();
                     }
 
                     if (value == OpenerState.OpenerFinished)
+                    {
                         if (Service.Configuration.OutputOpenerLogs)
                             DuoLog.Information("Opener Finished");
                         else
                             Svc.Log.Debug($"Opener Finished");
+
+                        if (AllowReopener)
+                            ResetOpener();
+                    }
                 }
             }
         }
@@ -106,10 +121,13 @@ namespace WrathCombo.CustomComboNS
         private DateTime DelayedAt;
 
         public uint CurrentOpenerAction { get; set; }
+        public uint PreviousOpenerAction { get; set; }
 
         public abstract int MinOpenerLevel { get; }
 
         public abstract int MaxOpenerLevel { get; }
+
+        public virtual bool AllowReopener { get; set; } = false;
 
         internal abstract UserData? ContentCheckConfig { get; }
 
@@ -117,7 +135,7 @@ namespace WrathCombo.CustomComboNS
 
         public abstract bool HasCooldowns();
 
-        public bool FullOpener(ref uint actionID)
+        public unsafe bool FullOpener(ref uint actionID)
         {
             bool inContent = ContentCheckConfig is UserBoolArray ? ContentCheck.IsInConfiguredContent((UserBoolArray)ContentCheckConfig, ContentCheck.ListSet.BossOnly) : ContentCheckConfig is UserInt ? ContentCheck.IsInConfiguredContent((UserInt)ContentCheckConfig, ContentCheck.ListSet.BossOnly) : false;
             if (!LevelChecked || OpenerActions.Count == 0 || !inContent)
@@ -145,50 +163,64 @@ namespace WrathCombo.CustomComboNS
                     return false;
                 }
 
-                if (OpenerStep > 1 && ActionWatching.TimeSinceLastAction.TotalSeconds >= 5 && !PrepullDelays.Any(x => x.Steps.Any(y => y == OpenerStep)))
+                if (OpenerStep > 1 && InCombat() && ActionWatching.TimeSinceLastAction.TotalSeconds >= 5 && !PrepullDelays.Any(x => x.Steps.Any(y => y == OpenerStep)))
                 {
                     CurrentState = OpenerState.FailedOpener;
                     return false;
                 }
 
-                actionID = CurrentOpenerAction = OpenerActions[OpenerStep - 1];
-                
-                if (DelayedWeaveSteps.Any(x => x == OpenerStep))
+                while (GetCooldownChargeRemainingTime(CurrentOpenerAction) > 6 && !HasCharges(CurrentOpenerAction))
                 {
-                    if (!CustomComboFunctions.CanDelayedWeave())
-                    {
-                        actionID = 11;
-                        return true;
-                    }
-                }
-
-                foreach (var (Steps, NewAction, Condition) in SubstitutionSteps.Where(x => x.Steps.Any(y => y == OpenerStep)))
-                {
-                    if (Condition())
-                    {
-                        CurrentOpenerAction = actionID = NewAction;
+                    Svc.Log.Debug($"Skipping {CurrentOpenerAction.ActionName()}");
+                    OpenerStep++;
+                    if (OpenerStep >= OpenerActions.Count)
                         break;
-                    }
-                    else
-                        CurrentOpenerAction = OpenerActions[OpenerStep - 1];
+
+                    CurrentOpenerAction = OpenerActions[OpenerStep - 1];
                 }
 
-                foreach (var (Steps, HoldDelay) in PrepullDelays.Where(x => x.Steps.Any(y => y == OpenerStep)))
+                if (OpenerStep < OpenerActions.Count)
                 {
-                    if (DelayedStep != OpenerStep)
+                    actionID = CurrentOpenerAction = OpenerActions[OpenerStep - 1];
+
+                    if (DelayedWeaveSteps.Any(x => x == OpenerStep))
                     {
-                        DelayedAt = DateTime.Now;
-                        DelayedStep = OpenerStep;
+                        if (!CanDelayedWeave())
+                        {
+                            actionID = 11;
+                            return true;
+                        }
                     }
 
-                    if ((DateTime.Now - DelayedAt).TotalSeconds < HoldDelay && !CustomComboFunctions.InCombat())
+                    foreach (var (Steps, NewAction, Condition) in SubstitutionSteps.Where(x => x.Steps.Any(y => y == OpenerStep)))
                     {
-                        actionID = 11;
-                        return true;
+                        if (Condition())
+                        {
+                            CurrentOpenerAction = actionID = NewAction;
+                            break;
+                        }
+                        else
+                            CurrentOpenerAction = OpenerActions[OpenerStep - 1];
                     }
+
+                    foreach (var (Steps, HoldDelay) in PrepullDelays.Where(x => x.Steps.Any(y => y == OpenerStep)))
+                    {
+                        if (DelayedStep != OpenerStep)
+                        {
+                            DelayedAt = DateTime.Now;
+                            DelayedStep = OpenerStep;
+                        }
+
+                        if ((DateTime.Now - DelayedAt).TotalSeconds < HoldDelay && !InCombat())
+                        {
+                            actionID = 11;
+                            return true;
+                        }
+                    }
+
+
+                    return true;
                 }
-
-                return true;
 
             }
 
@@ -241,6 +273,8 @@ namespace WrathCombo.CustomComboNS
                 if (currentOpener != null && currentOpener != value)
                 {
                     Svc.Framework.Update -= currentOpener.UpdateOpener;
+                    OnCastInterrupted -= RevertInterruptedCasts;
+                    Svc.Condition.ConditionChange -= ResetAfterCombat;
                     Svc.Log.Debug($"Removed update hook");
                 }
 
@@ -248,7 +282,24 @@ namespace WrathCombo.CustomComboNS
                 {
                     currentOpener = value;
                     Svc.Framework.Update += currentOpener.UpdateOpener;
+                    OnCastInterrupted += RevertInterruptedCasts;
+                    Svc.Condition.ConditionChange += ResetAfterCombat;
                 }
+            }
+        }
+
+        private static void ResetAfterCombat(ConditionFlag flag, bool value)
+        {
+            if (flag == ConditionFlag.InCombat && !value)
+                CurrentOpener.ResetOpener();
+        }
+
+        private static void RevertInterruptedCasts(uint interruptedAction)
+        {
+            if (CurrentOpener?.CurrentState is OpenerState.OpenerReady)
+            {
+                if (CurrentOpener?.OpenerStep > 1 && interruptedAction == CurrentOpener.PreviousOpenerAction)
+                    CurrentOpener.OpenerStep -= 1;
             }
         }
 

@@ -11,6 +11,7 @@
         public HealerRotationMode HealerRotationMode;
         public HealerSettings HealerSettings = new();
         public DPSSettings DPSSettings = new();
+        public int Throttler = 50;
     }
 
     public class DPSSettings
@@ -36,6 +37,7 @@
         public bool AutoRezDPSJobs = false;
         public bool AutoCleanse = false;
         public bool PreEmptiveHoT = false;
+        public bool IncludeNPCs = false;
 
     }
 }

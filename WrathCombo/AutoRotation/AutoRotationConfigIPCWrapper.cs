@@ -61,6 +61,8 @@ public class AutoRotationConfigIPCWrapper(AutoRotationConfig config)
 
     public int CombatDelay => config.CombatDelay;
 
+    public int Throttler => config.Throttler;
+
     #endregion
 }
 
@@ -162,6 +164,18 @@ public class HealerSettingsIPCWrapper(HealerSettings settings)
             return checkControlled is not null
                 ? checkControlled.Value.state == 1
                 : settings.AutoCleanse;
+        }
+    }
+
+    public bool IncludeNPCs
+    {
+        get
+        {
+            var checkControlled =
+                P.IPC.UIHelper.AutoRotationConfigControlled("IncludeNPCs");
+            return checkControlled is not null
+                ? checkControlled.Value.state == 1
+                : settings.IncludeNPCs;
         }
     }
 

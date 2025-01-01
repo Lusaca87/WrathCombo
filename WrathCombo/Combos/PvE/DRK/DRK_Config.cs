@@ -1,6 +1,9 @@
 #region
 
+using System.Numerics;
 using Dalamud.Interface.Utility;
+using ECommons.ImGuiMethods;
+using ImGuiNET;
 using WrathCombo.Combos.PvP;
 using WrathCombo.CustomComboNS.Functions;
 using WrathCombo.Data;
@@ -185,10 +188,130 @@ internal partial class DRK
                     break;
 
                 #endregion
+
+                #region One-Button Mitigation
+
+                case CustomComboPreset.DRK_Mit_LivingDead_Max:
+                    UserConfig.DrawDifficultyMultiChoice(
+                        DRK_Mit_EmergencyLivingDead_Difficulty,
+                        DRK_Mit_EmergencyLivingDead_DifficultyListSet,
+                        "Select what difficulties Emergency Living Dead should be used in:"
+                    );
+
+                    UserConfig.DrawSliderInt(5, 30, DRK_Mit_LivingDead_Health,
+                        startUsingAtDescription,
+                        itemWidth: medium, sliderIncrement: SliderIncrements.Fives);
+
+                    break;
+
+                case CustomComboPreset.DRK_Mit_TheBlackestNight:
+                    UserConfig.DrawSliderInt(10, 100, DRK_Mit_TBN_Health,
+                        startUsingAtDescription + " (100 = Disable check)",
+                        itemWidth: medium, sliderIncrement: SliderIncrements.Tens);
+
+                    UserConfig.DrawPriorityInput(DRK_Mit_Priorities,
+                        numberMitigationOptions, 0,
+                        "The Blackest Night Priority:");
+
+                    break;
+
+                case CustomComboPreset.DRK_Mit_Oblation:
+                    UserConfig.DrawSliderInt(0, 1, DRK_Mit_Oblation_Charges,
+                        "How many charges to keep ready? (0 = Use All)",
+                        itemWidth: little, sliderIncrement: SliderIncrements.Ones);
+
+                    UserConfig.DrawPriorityInput(DRK_Mit_Priorities,
+                        numberMitigationOptions, 1,
+                        "Oblation Priority:");
+
+                    break;
+
+                case CustomComboPreset.DRK_Mit_Reprisal:
+                    UserConfig.DrawPriorityInput(DRK_Mit_Priorities,
+                        numberMitigationOptions, 2,
+                        "Reprisal Priority:");
+
+                    break;
+
+                case CustomComboPreset.DRK_Mit_DarkMissionary:
+                    ImGui.Dummy(new Vector2(15f.Scale(), 0f));
+                    ImGui.SameLine();
+                    UserConfig.DrawHorizontalRadioButton(
+                        DRK_Mit_DarkMissionary_PartyRequirement,
+                        "Require party",
+                        "Will not use Dark Missionary unless there are 2 or more party members.",
+                        outputValue: (int)PartyRequirement.Yes, itemWidth: medium);
+                    UserConfig.DrawHorizontalRadioButton(
+                        DRK_Mit_DarkMissionary_PartyRequirement,
+                        "Use Always",
+                        "Will not require a party for Dark Missionary.",
+                        outputValue: (int)PartyRequirement.No, itemWidth: medium);
+
+                    UserConfig.DrawPriorityInput(DRK_Mit_Priorities,
+                        numberMitigationOptions, 3,
+                        "Dark Missionary Priority:");
+
+                    break;
+
+                case CustomComboPreset.DRK_Mit_Rampart:
+                    UserConfig.DrawSliderInt(40, 100, DRK_Mit_Rampart_Health,
+                        startUsingAtDescription + " (100 = Disable check)",
+                        itemWidth: medium, sliderIncrement: SliderIncrements.Fives);
+
+                    UserConfig.DrawPriorityInput(DRK_Mit_Priorities,
+                        numberMitigationOptions, 4,
+                        "Rampart Priority:");
+
+                    break;
+
+                case CustomComboPreset.DRK_Mit_DarkMind:
+                    UserConfig.DrawPriorityInput(DRK_Mit_Priorities,
+                        numberMitigationOptions, 5,
+                        "Dark Mind Priority:");
+
+                    break;
+
+                case CustomComboPreset.DRK_Mit_ArmsLength:
+                    ImGui.Dummy(new Vector2(15f.Scale(), 0f));
+                    ImGui.SameLine();
+                    UserConfig.DrawHorizontalRadioButton(
+                        DRK_Mit_ArmsLength_Boss, "All Enemies",
+                        "Will use Arm's Length regardless of the type of enemy.",
+                        outputValue: (int)BossAvoidance.Off, itemWidth: 125f);
+                    UserConfig.DrawHorizontalRadioButton(
+                        DRK_Mit_ArmsLength_Boss, "Avoid Bosses",
+                        "Will try not to use Arm's Length when in a boss fight.",
+                        outputValue: (int)BossAvoidance.On, itemWidth: 125f);
+
+                    UserConfig.DrawSliderInt(0, 3, DRK_Mit_ArmsLength_EnemyCount,
+                        "How many enemies should be nearby? (0 = No Requirement)",
+                        itemWidth: little, sliderIncrement: SliderIncrements.Ones);
+
+                    UserConfig.DrawPriorityInput(DRK_Mit_Priorities,
+                        numberMitigationOptions, 6,
+                        "Arm's Length Priority:");
+
+                    break;
+
+                case CustomComboPreset.DRK_Mit_ShadowWall:
+                    UserConfig.DrawSliderInt(30, 100, DRK_Mit_ShadowWall_Health,
+                        startUsingAtDescription + " (100 = Disable check)",
+                        itemWidth: medium, sliderIncrement: SliderIncrements.Fives);
+
+                    UserConfig.DrawPriorityInput(DRK_Mit_Priorities,
+                        numberMitigationOptions, 7,
+                        "Shadow Wall / Vigil Priority:");
+
+                    break;
+
+                #endregion
             }
         }
 
         #region Constants
+
+        /// Number of Mitigation Options
+        private const int numberMitigationOptions = 8;
 
         /// Smallest bar width
         private const float little = 100f;
@@ -213,12 +336,18 @@ internal partial class DRK
         /// <summary>
         ///     Whether abilities should be restricted to Bosses or not.
         /// </summary>
-        /// <seealso cref="Config.DRK_ST_TBNBossRestriction" />
-        /// <seealso cref="Config.DRK_ST_LivingDeadBossRestriction" />
+        /// <seealso cref="DRK_ST_TBNBossRestriction" />
+        /// <seealso cref="DRK_ST_LivingDeadBossRestriction" />
         internal enum BossAvoidance
         {
             Off = 1,
             On = 2
+        }
+
+        internal enum PartyRequirement
+        {
+            No,
+            Yes
         }
 
         #endregion
@@ -548,6 +677,134 @@ internal partial class DRK
         /// <seealso cref="CustomComboPreset.DRK_Variant_Cure" />
         public static readonly UserInt DRK_VariantCure =
             new("DRKVariantCure", 30);
+
+        #region One-Button Mitigation
+
+        /// <summary>
+        ///     Difficulty of Emergency Living Dead for Mitigation.
+        /// </summary>
+        /// <value>
+        ///     <b>Default</b>: <see cref="ContentCheck.BottomHalfContent" /> <br />
+        ///     <b>Options</b>: <see cref="ContentCheck.BottomHalfContent" />
+        ///     and/or <see cref="ContentCheck.TopHalfContent" />
+        /// </value>
+        /// <seealso cref="CustomComboPreset.DRK_Mit_LivingDead_Max" />
+        public static readonly UserBoolArray
+            DRK_Mit_EmergencyLivingDead_Difficulty =
+                new("DRK_Mit_EmergencyLivingDead_Difficulty", [true, false]);
+
+        /// <summary>
+        ///     What Difficulty List Set
+        ///     <see cref="DRK_Mit_EmergencyLivingDead_Difficulty" /> is set to.
+        /// </summary>
+        /// <seealso cref="CustomComboPreset.DRK_Mit_LivingDead_Max" />
+        public static readonly ContentCheck.ListSet
+            DRK_Mit_EmergencyLivingDead_DifficultyListSet =
+                ContentCheck.ListSet.Halved;
+
+        /// <summary>
+        ///     Self HP% to use Living Dead below in the Mitigation Rotation.
+        /// </summary>
+        /// <value>
+        ///     <b>Default</b>: 20 <br />
+        ///     <b>Range</b>: 5 - 30 <br />
+        ///     <b>Step</b>: <see cref="SliderIncrements.Fives" />
+        /// </value>
+        /// <seealso cref="CustomComboPreset.DRK_Mit_LivingDead_Max" />
+        public static UserInt DRK_Mit_LivingDead_Health =
+            new("DRK_Mit_LivingDead_Health", 20);
+
+        /// <summary>
+        ///     Mitigation Ability Priority List.
+        /// </summary>
+        public static readonly UserIntArray
+            DRK_Mit_Priorities =
+                new("DRK_Mit_Priorities");
+
+        /// <summary>
+        ///     Self HP% to use The Blackest Night below in the Mitigation Rotation.
+        /// </summary>
+        /// <value>
+        ///     <b>Default</b>: 60 <br />
+        ///     <b>Range</b>: 10 - 100 <br />
+        ///     <b>Step</b>: <see cref="SliderIncrements.Tens" />
+        /// </value>
+        /// <seealso cref="CustomComboPreset.DRK_Mit_TheBlackestNight" />
+        public static UserInt DRK_Mit_TBN_Health =
+            new("DRK_Mit_TBN_Health", 60);
+
+        /// <summary>
+        ///     Party requirement for using Dark Missionary in the Mitigation Rotation.
+        /// </summary>
+        /// <value>
+        ///     <b>Default</b>: <see cref="PartyRequirement.Yes" /> <br />
+        ///     <b>Options</b>: <see cref="PartyRequirement">PartyRequirement Enum</see>
+        /// </value>
+        public static readonly UserInt
+            DRK_Mit_DarkMissionary_PartyRequirement =
+                new("DRK_Mit_DarkMissionary_PartyRequirement",
+                    (int)PartyRequirement.Yes);
+
+        /// <summary>
+        ///     Self HP% to use Rampart below in the Mitigation Rotation.
+        /// </summary>
+        /// <value>
+        ///     <b>Default</b>: 65 <br />
+        ///     <b>Range</b>: 40 - 100 <br />
+        ///     <b>Step</b>: <see cref="SliderIncrements.Fives" />
+        /// </value>
+        /// <seealso cref="CustomComboPreset.DRK_Mit_Rampart" />
+        public static UserInt DRK_Mit_Rampart_Health =
+            new("DRK_Mit_Rampart_Health", 65);
+
+        /// <summary>
+        ///     Arm's Length Boss Restriction for Mitigation.
+        /// </summary>
+        /// <value>
+        ///     <b>Default</b>: <see cref="BossAvoidance.On" /> <br />
+        ///     <b>Options</b>: <see cref="BossAvoidance">BossAvoidance Enum</see>
+        /// </value>
+        /// <seealso cref="CustomComboPreset.DRK_Mit_ArmsLength" />
+        public static readonly UserInt DRK_Mit_ArmsLength_Boss =
+            new("DRK_Mit_ArmsLength_Boss", (int)BossAvoidance.On);
+
+        /// <summary>
+        ///     The number of enemies to be nearby for Arm's Length.
+        /// </summary>
+        /// <value>
+        ///     <b>Default</b>: 0 <br />
+        ///     <b>Range</b>: 0 - 3 <br />
+        ///     <b>Step</b>: <see cref="SliderIncrements.Ones" />
+        /// </value>
+        /// <seealso cref="CustomComboPreset.DRK_Mit_ArmsLength" />
+        public static UserInt DRK_Mit_ArmsLength_EnemyCount =
+            new("DRK_Mit_ArmsLength_EnemyCount", 0);
+
+        /// <summary>
+        ///     Self HP% to use Shadow Wall below in the Mitigation Rotation.
+        /// </summary>
+        /// <value>
+        ///     <b>Default</b>: 45 <br />
+        ///     <b>Range</b>: 30 - 100 <br />
+        ///     <b>Step</b>: <see cref="SliderIncrements.Fives" />
+        /// </value>
+        /// <seealso cref="CustomComboPreset.DRK_Mit_ShadowWall" />
+        public static UserInt DRK_Mit_ShadowWall_Health =
+            new("DRK_Mit_ShadowWall_Health", 45);
+
+        /// <summary>
+        ///     The number of Oblation charges to keep for manual use.
+        /// </summary>
+        /// <value>
+        ///     <b>Default</b>: 0 <br />
+        ///     <b>Range</b>: 0 - 1 <br />
+        ///     <b>Step</b>: <see cref="SliderIncrements.Ones" />
+        /// </value>
+        /// <seealso cref="CustomComboPreset.DRK_Mit_Oblation" />
+        public static UserInt DRK_Mit_Oblation_Charges =
+            new("DRK_Mit_Oblation_Charges", 0);
+
+        #endregion
 
         #endregion
     }

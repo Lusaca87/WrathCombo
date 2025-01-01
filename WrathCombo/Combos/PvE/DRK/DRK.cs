@@ -1,10 +1,12 @@
 #region
 
+using System.Linq;
 using Dalamud.Game.ClientState.JobGauge.Types;
 using WrathCombo.Combos.PvE.Content;
 using WrathCombo.CustomComboNS;
 using WrathCombo.Data;
 
+// ReSharper disable UnusedType.Global
 // ReSharper disable ClassNeverInstantiated.Global
 // ReSharper disable InconsistentNaming
 // ReSharper disable CheckNamespace
@@ -22,11 +24,10 @@ internal partial class DRK
         protected internal override CustomComboPreset Preset { get; } =
             CustomComboPreset.DRK_ST_Combo;
 
-        protected override uint Invoke(uint actionID, uint lastComboMove,
-            float comboTime, byte level)
+        protected override uint Invoke(uint actionID)
         {
             // Bail if not looking at the replaced action
-            if (actionID != HardSlash) return actionID;
+            if (actionID is not HardSlash) return actionID;
 
             #region Variables
 
@@ -291,10 +292,10 @@ internal partial class DRK
             }
 
             // 1-2-3 combo
-            if (!(comboTime > 0)) return HardSlash;
-            if (lastComboMove == HardSlash && LevelChecked(SyphonStrike))
+            if (!(ComboTimer > 0)) return HardSlash;
+            if (ComboAction == HardSlash && LevelChecked(SyphonStrike))
                 return SyphonStrike;
-            if (lastComboMove == SyphonStrike && LevelChecked(Souleater))
+            if (ComboAction == SyphonStrike && LevelChecked(Souleater))
             {
                 // Blood management
                 if (IsEnabled(CustomComboPreset.DRK_ST_BloodOvercap)
@@ -313,11 +314,10 @@ internal partial class DRK
         protected internal override CustomComboPreset Preset { get; } =
             CustomComboPreset.DRK_AoE_Combo;
 
-        protected override uint Invoke(uint actionID, uint lastComboMove,
-            float comboTime, byte level)
+        protected override uint Invoke(uint actionID)
         {
             // Bail if not looking at the replaced action
-            if (actionID != Unleash) return actionID;
+            if (actionID is not Unleash) return actionID;
 
             var hpRemainingShadow = Config.DRK_AoE_LivingShadowThreshold;
             var hpRemainingDelirium = Config.DRK_AoE_DeliriumThreshold;
@@ -470,8 +470,8 @@ internal partial class DRK
                 return OriginalHook(Quietus);
 
             // 1-2-3 combo
-            if (!(comboTime > 0)) return Unleash;
-            if (lastComboMove == Unleash && LevelChecked(StalwartSoul))
+            if (!(ComboTimer > 0)) return Unleash;
+            if (ComboAction == Unleash && LevelChecked(StalwartSoul))
             {
                 if (IsEnabled(CustomComboPreset.DRK_AoE_BloodOvercap)
                     && Gauge.Blood >= 90
@@ -489,40 +489,68 @@ internal partial class DRK
         protected internal override CustomComboPreset Preset { get; } =
             CustomComboPreset.DRK_oGCD;
 
-        protected override uint Invoke(uint actionID, uint lastComboMove,
-            float comboTime, byte level)
+        protected override uint Invoke(uint actionID)
         {
-            var gauge = GetJobGauge<DRKGauge>();
+            if (actionID is not (CarveAndSpit or AbyssalDrain)) return actionID;
 
-            if (actionID == CarveAndSpit || actionID == AbyssalDrain)
+            if (IsOffCooldown(LivingShadow)
+                && LevelChecked(LivingShadow))
+                return LivingShadow;
+
+            if (IsOffCooldown(SaltedEarth)
+                && LevelChecked(SaltedEarth))
+                return SaltedEarth;
+
+            if (IsOffCooldown(CarveAndSpit)
+                && LevelChecked(AbyssalDrain))
+                return actionID;
+
+            if (IsOffCooldown(SaltAndDarkness)
+                && HasEffect(Buffs.SaltedEarth)
+                && LevelChecked(SaltAndDarkness))
+                return SaltAndDarkness;
+
+            if (IsEnabled(CustomComboPreset.DRK_Shadowbringer_oGCD)
+                && GetCooldownRemainingTime(Shadowbringer) < 60
+                && LevelChecked(Shadowbringer)
+                && Gauge.DarksideTimeRemaining > 0)
+                return Shadowbringer;
+
+            return actionID;
+        }
+    }
+
+    #region One-Button Mitigation
+    internal class DRK_Mit_OneButton : CustomCombo
+    {
+        protected internal override CustomComboPreset Preset { get; } =
+            CustomComboPreset.DRK_Mit_OneButton;
+
+        protected override uint Invoke(uint actionID)
+        {
+            if (actionID is not DarkMind) return actionID;
+
+            if (IsEnabled(CustomComboPreset.DRK_Mit_LivingDead_Max) &&
+                ActionReady(LivingDead) &&
+                PlayerHealthPercentageHp() <= Config.DRK_Mit_LivingDead_Health &&
+                ContentCheck.IsInConfiguredContent(
+                    Config.DRK_Mit_EmergencyLivingDead_Difficulty,
+                    Config.DRK_Mit_EmergencyLivingDead_DifficultyListSet
+                ))
+                return LivingDead;
+
+            foreach (var priority in Config.DRK_Mit_Priorities.Items.OrderBy(x => x))
             {
-                if (IsOffCooldown(LivingShadow)
-                    && LevelChecked(LivingShadow))
-                    return LivingShadow;
-
-                if (IsOffCooldown(SaltedEarth)
-                    && LevelChecked(SaltedEarth))
-                    return SaltedEarth;
-
-                if (IsOffCooldown(CarveAndSpit)
-                    && LevelChecked(AbyssalDrain))
-                    return actionID;
-
-                if (IsOffCooldown(SaltAndDarkness)
-                    && HasEffect(Buffs.SaltedEarth)
-                    && LevelChecked(SaltAndDarkness))
-                    return SaltAndDarkness;
-
-                if (IsEnabled(CustomComboPreset.DRK_Shadowbringer_oGCD)
-                    && GetCooldownRemainingTime(Shadowbringer) < 60
-                    && LevelChecked(Shadowbringer)
-                    && gauge.DarksideTimeRemaining > 0)
-                    return Shadowbringer;
+                var index = Config.DRK_Mit_Priorities.IndexOf(priority);
+                if (CheckMitigationConfigMeetsRequirements(index, out var action))
+                    return action;
             }
 
             return actionID;
         }
     }
+    #endregion
+
 
     #region IDs
 
@@ -532,22 +560,22 @@ internal partial class DRK
 
     public const uint
 
-        #region Single-Target 1-2-3 Combo
+    #region Single-Target 1-2-3 Combo
 
         HardSlash = 3617,
         SyphonStrike = 3623,
         Souleater = 3632,
 
-        #endregion
+    #endregion
 
-        #region AoE 1-2-3 Combo
+    #region AoE 1-2-3 Combo
 
         Unleash = 3621,
         StalwartSoul = 16468,
 
-        #endregion
+    #endregion
 
-        #region Single-Target oGCDs
+    #region Single-Target oGCDs
 
         CarveAndSpit = 3643, // With AbyssalDrain
         EdgeOfDarkness = 16467, // For MP
@@ -557,9 +585,9 @@ internal partial class DRK
         Comeuppance = 36929, // Under Enhanced Delirium
         Torcleaver = 36930, // Under Enhanced Delirium
 
-        #endregion
+    #endregion
 
-        #region AoE oGCDs
+    #region AoE oGCDs
 
         AbyssalDrain = 3641, // Cooldown shared with CarveAndSpit
         FloodOfDarkness = 16466, // For MP
@@ -569,35 +597,39 @@ internal partial class DRK
         SaltAndDarkness = 25755, // Recast of Salted Earth
         Impalement = 36931, // Under Delirium
 
-        #endregion
+    #endregion
 
-        #region Buffing oGCDs
+    #region Buffing oGCDs
 
         BloodWeapon = 3625,
         Delirium = 7390,
 
-        #endregion
+    #endregion
 
-        #region Burst Window
+    #region Burst Window
 
         LivingShadow = 16472,
         Shadowbringer = 25757,
         Disesteem = 36932,
 
-        #endregion
+    #endregion
 
-        #region Ranged Option
+    #region Ranged Option
 
         Unmend = 3624,
 
-        #endregion
+    #endregion
 
-        #region Mitigation
-
-        BlackestNight = 7393,
-        LivingDead = 3638,
-        ShadowedVigil = 36927;
-
+    #region Mitigation
+        Grit = 3629, // Lv10, instant, 2.0s CD (group 1), range 0, single-target, targets=Self
+        ReleaseGrit = 32067, // Lv10, instant, 1.0s CD (group 1), range 0, single-target, targets=Self
+        ShadowWall = 3636, // Lv38, instant, 120.0s CD (group 20), range 0, single-target, targets=Self
+        DarkMind = 3634, // Lv45, instant, 60.0s CD (group 8), range 0, single-target, targets=Self
+        LivingDead = 3638, // Lv50, instant, 300.0s CD (group 24), range 0, single-target, targets=Self
+        DarkMissionary = 16471, // Lv66, instant, 90.0s CD (group 14), range 0, AOE 30 circle, targets=Self
+        BlackestNight = 7393, // Lv70, instant, 15.0s CD (group 2), range 30, single-target, targets=Self/Party
+        Oblation = 25754, // Lv82, instant, 60.0s CD (group 18/71) (2 charges), range 30, single-target, targets=Self/Party
+        ShadowedVigil = 36927; // Lv92, instant, 120.0s CD (group 20), range 0, single-target, targets=Self, animLock=???
     #endregion
 
     #endregion
@@ -649,6 +681,10 @@ internal partial class DRK
 
         /// The triggered part of Vigil that needs procc'd to heal (happens below 50%)
         public const ushort ShadowedVigilant = 3902;
+
+        /// Oblation Active
+        public const ushort Oblation = 2682;
+
 
         #endregion
     }

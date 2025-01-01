@@ -18,7 +18,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using WrathCombo.Attributes;
 using WrathCombo.AutoRotation;
@@ -31,10 +30,10 @@ using WrathCombo.CustomComboNS.Functions;
 using WrathCombo.Data;
 using WrathCombo.Extensions;
 using WrathCombo.Services;
-using IPC = WrathCombo.Services.IPC;
 using WrathCombo.Window;
 using WrathCombo.Window.Functions;
 using WrathCombo.Window.Tabs;
+using IPC = WrathCombo.Services.IPC;
 using Status = Dalamud.Game.ClientState.Statuses.Status;
 
 namespace WrathCombo
@@ -94,9 +93,14 @@ namespace WrathCombo
             {
                 if (jobID != value && value != null)
                 {
-                    AST.QuickTargetCards.SelectedRandomMember = null;
-                    PvEFeatures.HasToOpenJob = true;
-                    WrathOpener.SelectOpener(value.Value);
+                    Svc.Framework.RunOnTick(() =>
+                    {
+                        Service.IconReplacer.UpdateFilteredCombos();
+                        AST.QuickTargetCards.SelectedRandomMember = null;
+                        PvEFeatures.HasToOpenJob = true;
+                        WrathOpener.SelectOpener(value.Value);
+                        P.IPCSearch.UpdateActiveJobPresets();
+                    }, TimeSpan.FromSeconds(0.1));
                 }
                 jobID = value;
             }
@@ -144,7 +148,7 @@ namespace WrathCombo
                 ToggleAutorot(!Service.Configuration.RotationConfig.Enabled);
             };
             DtrBarEntry.Tooltip = new SeString(
-            new TextPayload("Click to toggle Auto-Rotation Enabled.\n"),
+            new TextPayload("Click to toggle Wrath Combo's Auto-Rotation.\n"),
             new TextPayload("Disable this icon in /xlsettings -> Server Info Bar"));
 
             Svc.ClientState.Login += PrintLoginMessage;
@@ -152,6 +156,7 @@ namespace WrathCombo
 
             CachePresets();
             Svc.Framework.Update += OnFrameworkUpdate;
+            Svc.ClientState.TerritoryChanged += ClientState_TerritoryChanged;
 
             KillRedundantIDs();
             HandleConflictedCombos();
@@ -162,6 +167,11 @@ namespace WrathCombo
 #if DEBUG
             ConfigWindow.IsOpen = true;
 #endif
+        }
+
+        private void ClientState_TerritoryChanged(ushort obj)
+        {
+            Svc.Framework.RunOnTick(() => P.IPCSearch.UpdateActiveJobPresets(), TimeSpan.FromSeconds(1));
         }
 
         private const string OptionControlledByIPC =
@@ -224,11 +234,25 @@ namespace WrathCombo
             BlueMageService.PopulateBLUSpells();
             TargetHelper.Draw();
             AutoRotationController.Run();
+
+            // Skip the IPC checking if hidden
+            if (DtrBarEntry.UserHidden) return;
+
             var autoOn = IPC.GetAutoRotationState();
-            DtrBarEntry.Text = new SeString(
-                new IconPayload(autoOn ? BitmapFontIcon.SwordUnsheathed : BitmapFontIcon.SwordSheathed),
-                new TextPayload($"{(autoOn ? $": On ({Presets.GetJobAutorots.Count} active)" : ": Off")}")
-                );
+            var icon = new IconPayload(autoOn
+                ? BitmapFontIcon.SwordUnsheathed
+                : BitmapFontIcon.SwordSheathed);
+
+            var text = autoOn ? ": On" : ": Off";
+            if (!Service.Configuration.ShortDTRText && autoOn)
+                text += $" ({P.IPCSearch.ActiveJobPresets} active)";
+            var ipcControlledText =
+                IPC.UIHelper.AutoRotationStateControlled() is not null
+                    ? " (Locked)"
+                    : "";
+
+            var payloadText = new TextPayload(text + ipcControlledText);
+            DtrBarEntry.Text = new SeString(icon, payloadText);
         }
 
         private static void KillRedundantIDs()
@@ -312,6 +336,7 @@ namespace WrathCombo
             ws.RemoveAllWindows();
             Svc.DtrBar.Remove("Wrath Combo");
             Svc.Framework.Update -= OnFrameworkUpdate;
+            Svc.ClientState.TerritoryChanged -= ClientState_TerritoryChanged;
             Svc.PluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
             Svc.PluginInterface.UiBuilder.Draw -= DrawUI;
 
@@ -357,7 +382,6 @@ namespace WrathCombo
                                 continue;
 
                             Service.Configuration.EnabledActions.Add(preset);
-                            Service.Configuration.EnabledActions.Remove(preset);
                             if (int.TryParse(preset.ToString(), out int pres)) continue;
                             var controlled =
                                 IPC.UIHelper.PresetControlled(preset) is not null;
@@ -377,7 +401,6 @@ namespace WrathCombo
                             if (!preset.ToString().Equals(targetPreset, StringComparison.InvariantCultureIgnoreCase))
                                 continue;
 
-                            Service.Configuration.EnabledActions.Remove(preset);
                             if (int.TryParse(preset.ToString(), out int pres)) continue;
                             var controlled =
                                 IPC.UIHelper.PresetControlled(preset) is not null;
@@ -410,7 +433,7 @@ namespace WrathCombo
                             var controlled =
                                 IPC.UIHelper.PresetControlled(preset) is not null;
                             var ctrlText = controlled ? " " + OptionControlledByIPC : "";
-                            DuoLog.Information($"{preset} UNSET{ctrlText}");;
+                            DuoLog.Information($"{preset} UNSET{ctrlText}"); ;
                         }
 
                         Service.Configuration.Save();
@@ -490,7 +513,7 @@ namespace WrathCombo
                             int conflictingPluginsCount = conflictingPlugins?.Length ?? 0;
 
                             int leaseesCount = P.IPC.UIHelper.ShowNumberOfLeasees();
-                            (string pluginName, int configurationsCount)[] leasees =  P.IPC.UIHelper.ShowLeasees();
+                            (string pluginName, int configurationsCount)[] leasees = P.IPC.UIHelper.ShowLeasees();
 
                             string repoURL = RepoCheckFunctions.FetchCurrentRepo()?.InstalledFromUrl ?? "Unknown";
                             string currentZone = Svc.Data.GetExcelSheet<TerritoryType>()?

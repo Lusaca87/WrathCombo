@@ -123,7 +123,7 @@ public class Lease(
     ///     <see cref="IPCPrefixForCallback">IPC</see>.
     /// </summary>
     /// <param name="cancellationReason">
-    ///     The <see cref="CancellationReason" /> for cancelling the lease.
+    ///     The <see cref="CancellationReasonEnum" /> for cancelling the lease.
     /// </param>
     /// <param name="additionalInfo">
     ///     Any additional information to provide with the cancellation.
@@ -135,7 +135,7 @@ public class Lease(
     ///     by the user via <see cref="UIHelper.RevokeControl"/>.
     /// </remarks>
     public void Cancel
-        (CancellationReason cancellationReason, string additionalInfo = "")
+        (CancellationReasonEnum cancellationReason, string additionalInfo = "")
     {
         Logging.Log(
             "Cancelling Lease for: "
@@ -263,6 +263,16 @@ public partial class Leasing
     }
 
     /// <summary>
+    ///     When <see cref="CheckAutoRotationControlled"/> was last cached.
+    /// </summary>
+    private DateTime? _lastAutoRotationStateCheck;
+
+    /// <summary>
+    ///     Cached value of <see cref="CheckAutoRotationControlled"/>
+    /// </summary>
+    private bool? _autoRotationStateUpdated;
+
+    /// <summary>
     ///     Checks if Auto-Rotation's state is controlled by a lease.
     /// </summary>
     /// <returns>
@@ -271,12 +281,22 @@ public partial class Leasing
     /// <seealso cref="Provider.GetAutoRotationState" />
     internal bool? CheckAutoRotationControlled()
     {
+        if (AutoRotationStateUpdated is null ||
+            Registrations.Count == 0)
+            return null;
+
+        if (_lastAutoRotationStateCheck >= AutoRotationStateUpdated)
+            return _autoRotationStateUpdated;
+
         var lease = Registrations.Values
             .Where(l => l.AutoRotationControlled.Count != 0)
             .OrderByDescending(l => l.LastUpdated)
             .FirstOrDefault();
 
-        return lease?.AutoRotationControlled[0];
+        _lastAutoRotationStateCheck = DateTime.Now;
+        _autoRotationStateUpdated = lease?.AutoRotationControlled[0];
+
+        return _autoRotationStateUpdated;
     }
 
     /// <summary>
@@ -347,130 +367,69 @@ public partial class Leasing
         var currentJobRow = CustomComboFunctions.LocalPlayer.ClassJob;
         var currentRealJob = currentJobRow.Value.RowId;
         if (currentJobRow.Value.ClassJobParent.RowId != currentJobRow.Value.RowId)
-            currentRealJob = CustomComboFunctions.JobIDs.ClassToJob
-                (currentJobRow.RowId);
+            currentRealJob =
+                CustomComboFunctions.JobIDs.ClassToJob(currentJobRow.RowId);
 
         var currentJob = (Job)currentRealJob;
         var job = currentJob.ToString();
         registration.JobsControlled[currentJob] = true;
 
-        // Lock the job if it's already ready
-        if (P.IPC.IsCurrentJobAutoRotationReady())
+        Logging.Log(
+            $"{registration.PluginName}: Registering Current Job ({job}) ...");
+
+        Task.Run(() =>
         {
-            List<string> combos = [];
-            List<string> options = [];
-            var comboStates = P.IPCSearch.ComboStatesByJobCategorized[job];
+            bool locking;
+            var combos = Helper.GetCombosToSetJobAutoRotationReady(job, false)!;
+            var options = Helper.GetCombosToSetJobAutoRotationReady(job)!;
+            string[] stringKeys;
 
-            #region Single-Target
-
-            comboStates[ComboTargetTypeKeys.SingleTarget]
-                .TryGetValue(ComboSimplicityLevelKeys.Simple,
-                    out var stSimpleResults);
-            var stSimple = stSimpleResults?.FirstOrDefault();
-
-            if (stSimple is not null)
-                combos.Add(stSimple.Value.Key);
+            // Lock the job if it's already ready
+            if (P.IPC.IsCurrentJobAutoRotationReady())
+            {
+                locking = true;
+                stringKeys = [];
+            }
+            // Get the list of combos and options to enable
             else
             {
-                var stAdvanced = comboStates[ComboTargetTypeKeys.SingleTarget]
-                    [ComboSimplicityLevelKeys.Advanced].First().Key;
-                combos.Add(stAdvanced);
-                options.AddRange(P.IPCSearch.OptionNamesByJob[job][stAdvanced]);
+                locking = false;
+                stringKeys = registration.CombosControlled.Keys
+                    .Select(k => k.ToString()).ToArray();
             }
 
-            #endregion
+            // Register all combos
+            foreach (var combo in combos)
+                AddRegistrationForCombo(lease, combo, true, true);
 
-            #region Multi-Target
-
-            comboStates[ComboTargetTypeKeys.MultiTarget]
-                .TryGetValue(ComboSimplicityLevelKeys.Simple,
-                    out var mtSimpleResults);
-            var mtSimple = mtSimpleResults?.FirstOrDefault();
-
-            if (mtSimple is not null)
-                combos.Add(mtSimple.Value.Key);
-            else
+            // Register all options
+            foreach (var option in options)
             {
-                var mtAdvanced = comboStates[ComboTargetTypeKeys.MultiTarget]
-                    [ComboSimplicityLevelKeys.Advanced].First().Key;
-                combos.Add(mtAdvanced);
-                options.AddRange(P.IPCSearch.OptionNamesByJob[job][mtAdvanced]);
-            }
+                if (stringKeys.Contains(option)) continue;
 
-            #endregion
-
-            #region Healing
-
-            #region Single-Target
-
-            if (comboStates.TryGetValue(ComboTargetTypeKeys.HealST,
-                    out var healResults))
-                combos.Add(healResults[ComboSimplicityLevelKeys.Other].First().Key);
-            var healST = healResults?.FirstOrDefault().Key;
-            if (healST is not null)
-            {
-                var healSTPreset = comboStates[ComboTargetTypeKeys.HealST]
-                    [ComboSimplicityLevelKeys.Other].First().Key;
-                options.AddRange(P.IPCSearch.OptionNamesByJob[job][healSTPreset]);
-            }
-
-            #endregion
-
-            #region Multi-Target
-
-            if (comboStates.TryGetValue(ComboTargetTypeKeys.HealMT, out healResults))
-                combos.Add(healResults[ComboSimplicityLevelKeys.Other].First().Key);
-            var healMT = healResults?.FirstOrDefault().Key;
-            if (healMT is not null)
-            {
-                var healMTPreset = comboStates[ComboTargetTypeKeys.HealMT]
-                    [ComboSimplicityLevelKeys.Other].First().Key;
-                options.AddRange(P.IPCSearch.OptionNamesByJob[job][healMTPreset]);
-            }
-
-            #endregion
-
-            #endregion
-
-            Task.Run(() =>
-            {
-                foreach (var combo in combos)
-                    AddRegistrationForCombo(lease, combo, true, true);
-                foreach (var option in options)
+                // Enable the option, or lock the option to its current state
+                var state = true;
+                if (locking)
                 {
                     var ccpOption = (CustomComboPreset)
                         Enum.Parse(typeof(CustomComboPreset), option);
-                    AddRegistrationForOption(lease, option,
-                        CustomComboFunctions.IsEnabled(ccpOption));
+                    state = CustomComboFunctions.IsEnabled(ccpOption);
                 }
 
-                Logging.Log(
-                    $"{registration.PluginName}: Registered Current Job ({job})" +
-                    $" (was already ready: locked it)");
-            });
-            return;
-        }
+                AddRegistrationForOption(lease, option, state);
+            }
 
-        // Register all Combos to make the job Auto-Rotation ready
-        Task.Run(() =>
-        {
-            foreach (var preset in Helper.GetCombosToSetJobAutoRotationReady
-                         (job, false))
-                AddRegistrationForCombo(lease, preset, true, true);
+            var logText =
+                $"{registration.PluginName}: Registered Current Job ({job})";
+            if (locking)
+                logText += " (was already ready: locked it)";
 
-            var stringKeys = registration.CombosControlled.Keys
-                .Select(k => k.ToString()).ToArray();
-            foreach (var preset in Helper.GetCombosToSetJobAutoRotationReady(job))
-                if (!stringKeys.Contains(preset))
-                    AddRegistrationForOption(lease, preset, true);
+            Logging.Log(logText);
 
             registration.LastUpdated = DateTime.Now;
             JobsUpdated = DateTime.Now;
             CombosUpdated = DateTime.Now;
             OptionsUpdated = DateTime.Now;
-
-            Logging.Log(
-                $"{registration.PluginName}: Registered Current Job ({job})");
         });
     }
 
@@ -481,7 +440,7 @@ public partial class Leasing
     ///     Your lease ID from <see cref="Provider.RegisterForLease(string,string)" />
     /// </param>
     /// <param name="cancellationReason">
-    ///     The <see cref="CancellationReason" /> for cancelling the lease.
+    ///     The <see cref="CancellationReasonEnum" /> for cancelling the lease.
     /// </param>
     /// <param name="additionalInfo">
     ///     Any additional information to log and provide with the cancellation.
@@ -491,10 +450,10 @@ public partial class Leasing
     ///     provided.
     /// </remarks>
     internal void RemoveRegistration
-    (Guid lease, CancellationReason cancellationReason,
+    (Guid lease, CancellationReasonEnum cancellationReason,
         string additionalInfo = "")
     {
-        if (cancellationReason == CancellationReason.WrathUserManuallyCancelled)
+        if (cancellationReason == CancellationReasonEnum.WrathUserManuallyCancelled)
             _userRevokedTemporaryBlacklist.Add(
                 lease,
                 (Registrations[lease].InternalPluginName,
@@ -568,7 +527,7 @@ public partial class Leasing
 
         if (CheckBlacklist(Registrations[lease].ConfigurationsHash) &&
             Registrations[lease].SetsLeased > 4)
-            RemoveRegistration(lease, CancellationReason.WrathUserManuallyCancelled,
+            RemoveRegistration(lease, CancellationReasonEnum.WrathUserManuallyCancelled,
                 "Matched currently-blacklisted configuration");
 
         registration.LastUpdated = DateTime.Now;
@@ -626,7 +585,7 @@ public partial class Leasing
 
         if (CheckBlacklist(Registrations[lease].ConfigurationsHash) &&
             Registrations[lease].SetsLeased > 4)
-            RemoveRegistration(lease, CancellationReason.WrathUserManuallyCancelled,
+            RemoveRegistration(lease, CancellationReasonEnum.WrathUserManuallyCancelled,
                 "Matched currently-blacklisted configuration");
 
         registration.LastUpdated = DateTime.Now;
@@ -669,13 +628,13 @@ public partial class Leasing
     ///     Suspend all leases. Called when IPC is disabled remotely.
     /// </summary>
     /// <param name="reason">
-    ///     The <see cref="CancellationReason">reason</see> for suspending leases.
+    ///     The <see cref="CancellationReasonEnum">reason</see> for suspending leases.
     /// </param>
     /// <seealso cref="Helper.IPCEnabled" />
     /// <seealso cref="RemoveRegistration" />
-    internal void SuspendLeases(CancellationReason? reason = null)
+    internal void SuspendLeases(CancellationReasonEnum? reason = null)
     {
-        var reasonToUse = reason ?? CancellationReason.AllServicesSuspended;
+        var reasonToUse = reason ?? CancellationReasonEnum.AllServicesSuspended;
 
         Logging.Warn("Suspending all leases.");
 
@@ -726,7 +685,7 @@ public partial class Leasing
         foreach (var (lease, registration) in leasesCopy)
             if (!plugins.Contains(registration.InternalPluginName))
                 RemoveRegistration(
-                    lease, CancellationReason.LeaseePluginDisabled
+                    lease, CancellationReasonEnum.LeaseePluginDisabled
                 );
 
         _checkingLeaseePluginsUnloaded = false;

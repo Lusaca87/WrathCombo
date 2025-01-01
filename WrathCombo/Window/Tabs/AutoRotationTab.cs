@@ -66,11 +66,10 @@ namespace WrathCombo.Window.Tabs
                 ImGuiEx.TextUnderlined($"Targeting Mode");
 
                 P.IPC.UIHelper.ShowIPCControlledIndicatorIfNeeded("DPSRotationMode");
-                P.IPC.UIHelper.ShowIPCControlledComboIfNeeded(
+                changed |= P.IPC.UIHelper.ShowIPCControlledComboIfNeeded(
                     "###DPSTargetingMode", true, ref cfg.DPSRotationMode,
                     ref cfg.HealerRotationMode, "DPSRotationMode");
 
-                changed |= ImGuiEx.EnumCombo("###DPSTargetingMode", ref cfg.DPSRotationMode);
                 ImGuiComponents.HelpMarker("Manual - Leaves all targeting decisions to you.\n" +
                     "Highest Max - Prioritises enemies with the highest max HP.\n" +
                     "Lowest Max - Prioritises enemies with the lowest max HP.\n" +
@@ -158,7 +157,7 @@ namespace WrathCombo.Window.Tabs
             {
                 ImGuiEx.TextUnderlined($"Healing Targeting Mode");
                 P.IPC.UIHelper.ShowIPCControlledIndicatorIfNeeded("HealerRotationMode");
-                P.IPC.UIHelper.ShowIPCControlledComboIfNeeded(
+                changed |= P.IPC.UIHelper.ShowIPCControlledComboIfNeeded(
                     "###HealerTargetingMode", false, ref cfg.DPSRotationMode,
                     ref cfg.HealerRotationMode, "HealerRotationMode");
                 ImGuiComponents.HelpMarker("Manual - Will only heal a target if you select them manually. If the target does not meet the healing threshold settings criteria below it will skip healing in favour of DPSing (if also enabled).\n" +
@@ -227,7 +226,15 @@ namespace WrathCombo.Window.Tabs
                 changed |= ImGui.Checkbox($"[{WHM.JobID.JobAbbreviation()}/{AST.JobID.JobAbbreviation()}] Pre-emptively apply heal over time on focus target", ref cfg.HealerSettings.PreEmptiveHoT);
                 ImGuiComponents.HelpMarker($"Applies {WHM.Regen.ActionName()}/{AST.AspectedBenefic.ActionName()} to your focus target when out of combat and they are 30y or less away from an enemy. (Bypasses \"Only in Combat\" setting)");
 
+                P.IPC.UIHelper.ShowIPCControlledIndicatorIfNeeded("IncludeNPCs");
+                changed |= P.IPC.UIHelper.ShowIPCControlledCheckboxIfNeeded("Heal Friendly NPCs", ref cfg.HealerSettings.IncludeNPCs);
+                ImGuiComponents.HelpMarker("Useful for healer quests where NPCs are expected to be healed but aren't added directly to your party.");
+
             }
+
+            ImGuiEx.TextUnderlined("Advanced");
+            changed |= ImGui.InputInt("Throttle Delay (ms)", ref cfg.Throttler);
+            ImGuiComponents.HelpMarker("Auto-Rotation has a built in throttler to only run every so many milliseconds for performance reasons. If you experience issues with frame rate, try increasing this value. Do note this may have a side-effect of introducing clipping if set too high, so experiment with the value.");
 
             if (changed)
                 Service.Configuration.Save();
