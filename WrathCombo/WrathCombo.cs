@@ -44,7 +44,6 @@ namespace WrathCombo
     /// <summary> Main plugin implementation. </summary>
     public sealed partial class WrathCombo : IDalamudPlugin
     {
-        private const string AddonName = "Wrath Combo - Edit by Velvet";
         private const string Command = "/wrath";
 
         private static TaskManager? TM;
@@ -135,7 +134,7 @@ namespace WrathCombo
             P = this;
             pluginInterface.Create<Service>();
             ECommonsMain.Init(pluginInterface, this);
-            PunishLibMain.Init(pluginInterface, AddonName);
+            PunishLibMain.Init(pluginInterface, "Wrath Combo");
 
             TM = new();
             Service.Configuration = pluginInterface.GetPluginConfig() as PluginConfiguration ?? new PluginConfiguration();
@@ -161,13 +160,12 @@ namespace WrathCombo
             Svc.PluginInterface.UiBuilder.OpenConfigUi += OnOpenConfigUi;
 
             EzCmd.Add(Command, OnCommand, "Open a window to edit custom combo settings.\n" +
-                                          "/wrath auto → Toggle Auto-rotation on/off.\n" +
-                                          "/wrath debug → Dumps a debug log onto your desktop for developers.\n" +
-                                          "/scombo - Old alias from XIVSlothCombo, still works!\n\n" +
-                                          "This is an private build by Velvet. Dont ask for Support in the official discord!!");
+                "/wrath auto → Toggle Auto-rotation on/off.\n" +
+                "/wrath debug → Dumps a debug log onto your desktop for developers.\n" +
+                "/scombo - Old alias from XIVSlothCombo, still works!");
             EzCmd.Add("/scombo", OnCommand);
 
-            DtrBarEntry ??= Svc.DtrBar.Get(AddonName);
+            DtrBarEntry ??= Svc.DtrBar.Get("Wrath Combo");
             DtrBarEntry.OnClick = () =>
             {
                 ToggleAutorot(!Service.Configuration.RotationConfig.Enabled);
@@ -314,7 +312,7 @@ namespace WrathCombo
         {
             try
             {
-                string basicMessage = $"Welcome to WrathCombo v{this.GetType().Assembly.GetName().Version} - Edit by Velvet!";
+                string basicMessage = $"Welcome to WrathCombo v{this.GetType().Assembly.GetName().Version}!";
                 using HttpResponseMessage? motd = httpClient.GetAsync("https://raw.githubusercontent.com/PunishXIV/WrathCombo/main/res/motd.txt").Result;
                 motd.EnsureSuccessStatusCode();
                 string? data = motd.Content.ReadAsStringAsync().Result;
@@ -341,7 +339,7 @@ namespace WrathCombo
 
         /// <inheritdoc/>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Used for non-static only window initialization")]
-        public string Name => AddonName;
+        public string Name => "Wrath Combo";
 
         /// <inheritdoc/>
         public void Dispose()
@@ -358,7 +356,7 @@ namespace WrathCombo
                 }
 
             ws.RemoveAllWindows();
-            Svc.DtrBar.Remove(AddonName);
+            Svc.DtrBar.Remove("Wrath Combo");
             Svc.Framework.Update -= OnFrameworkUpdate;
             Svc.ClientState.TerritoryChanged -= ClientState_TerritoryChanged;
             Svc.PluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
