@@ -17,12 +17,12 @@ namespace WrathCombo.CustomComboNS.Functions
         /// <summary> Calls the original hook. </summary>
         /// <param name="actionID"> Action ID. </param>
         /// <returns> The result from the hook. </returns>
-        public static uint OriginalHook(uint actionID) => Service.IconReplacer.OriginalHook(actionID);
+        public static uint OriginalHook(uint actionID) => Service.ActionReplacer.OriginalHook(actionID);
 
         /// <summary> Compare the original hook to the given action ID. </summary>
         /// <param name="actionID"> Action ID. </param>
         /// <returns> A value indicating whether the action would be modified. </returns>
-        public static bool IsOriginal(uint actionID) => Service.IconReplacer.OriginalHook(actionID) == actionID;
+        public static bool IsOriginal(uint actionID) => Service.ActionReplacer.OriginalHook(actionID) == actionID;
 
         /// <summary> Checks if the player is high enough level to use the passed Action ID. </summary>
         /// <param name="actionid"> ID of the action. </param>
@@ -317,6 +317,66 @@ namespace WrathCombo.CustomComboNS.Functions
 
                 return _beingTargetedHostile = Svc.Objects.Any(x => x.IsHostile() && x is IBattleChara chara && chara.CastTargetObjectId == LocalPlayer.GameObjectId);
             }
+        }
+
+        /// <summary>
+        /// Counts how many times an action has been used since combat started.
+        /// </summary>
+        /// <param name="actionId"></param>
+        /// <returns></returns>
+        public static int ActionCount(uint actionId) => ActionWatching.CombatActions.Count(x => x == OriginalHook(actionId));
+
+        /// <summary>
+        /// Counts how many times multiple actions have been used since combat started.
+        /// </summary>
+        /// <param name="actionIds"></param>
+        /// <returns></returns>
+        public static int ActionCount(uint[] actionIds)
+        {
+            int output = 0;
+            foreach (var a in actionIds)
+                output += ActionCount(a);
+
+            return output;
+        }
+
+        /// <summary>
+        /// Counts how many times an action has been used in combat since using another action
+        /// </summary>
+        /// <param name="actionToCheckAgainst"></param>
+        /// <param name="actionToCount"></param>
+        /// <returns></returns>
+        public static int TimesUsedSinceOtherAction(uint actionToCheckAgainst, uint actionToCount)
+        {
+            if (!ActionWatching.CombatActions.Any(x => x == actionToCheckAgainst)) return 0;
+
+            var startIdx = ActionWatching.CombatActions.LastIndexOf(actionToCheckAgainst);
+
+            var output = 0;
+            for (int i = startIdx; i < ActionWatching.CombatActions.Count; i++)
+            {
+                if (ActionWatching.CombatActions[i] == actionToCount)
+                    output++;
+            }
+
+            return output;
+        }
+
+        /// <summary>
+        /// Counts how many times multiple actions have been used in combat since using another action
+        /// </summary>
+        /// <param name="actionToCheckAgainst"></param>
+        /// <param name="actionsToCount"></param>
+        /// <returns></returns>
+        public static int TimesUsedSinceOtherAction(uint actionToCheckAgainst, uint[] actionsToCount)
+        {
+            var output = 0;
+            foreach(var a in actionsToCount)
+            {
+                output += TimesUsedSinceOtherAction(actionToCheckAgainst, a);
+            }
+
+            return output;
         }
     }
 }
