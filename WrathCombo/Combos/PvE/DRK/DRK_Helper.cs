@@ -89,6 +89,10 @@ internal partial class DRK
     /// <returns>A valid <see cref="WrathOpener">Opener</see>.</returns>
     internal static WrathOpener Opener()
     {
+
+        if (Level90Opener.LevelChecked)
+            return Level90Opener;
+        
         if (Opener1.LevelChecked)
             return Opener1;
 
@@ -1217,6 +1221,7 @@ internal partial class DRK
     }
 
     internal static DRKOpenerMaxLevel1 Opener1 = new();
+    internal static DRKOpenerLevel90 Level90Opener = new();
 
     internal class DRKOpenerMaxLevel1 : WrathOpener
     {
@@ -1274,6 +1279,69 @@ internal partial class DRK
             return true;
         }
     }
+    
+    internal class DRKOpenerLevel90 : WrathOpener
+    {
+        public override int MinOpenerLevel => 90;
+
+        public override int MaxOpenerLevel => 99;
+
+        public override List<uint> OpenerActions { get; set; } =
+        [
+            HardSlash,
+            EdgeOfShadow, // Not handled like a procc, since it sets up Darkside
+            Delirium,
+            SyphonStrike,
+            Souleater, // 5
+            LivingShadow,
+            SaltedEarth,
+            HardSlash,
+            Shadowbringer,
+            //EdgeOfShadow, // Handled like a procc
+            Bloodspiller,
+            CarveAndSpit,
+            Bloodspiller,
+            Shadowbringer,
+            //EdgeOfShadow,
+            Bloodspiller, // 15
+            SaltAndDarkness,
+            //EdgeOfShadow,
+            //SyphonStrike,
+            //EdgeOfShadow,
+        ];
+
+        public override List<(int[] Steps, Func<int> HoldDelay)> PrepullDelays { get; set; } =
+        [
+        ([1], () => 5)
+        ];
+        
+        internal override UserData? ContentCheckConfig =>
+            Config.DRK_ST_OpenerDifficulty;
+
+        public override bool HasCooldowns()
+        {
+            if (LocalPlayer.CurrentMp < 7000)
+                return false;
+
+            if (!IsOffCooldown(LivingShadow))
+                return false;
+
+            if (!IsOffCooldown(Delirium))
+                return false;
+
+            if (!IsOffCooldown(CarveAndSpit))
+                return false;
+
+            if (!IsOffCooldown(SaltedEarth))
+                return false;
+
+            if (GetRemainingCharges(Shadowbringer) < 2)
+                return false;
+
+            return true;
+        }
+    }
+    
 
     #endregion
 

@@ -24,6 +24,8 @@ public partial class WrathCombo
     private const string Command = "/wrath";
     private const string OldCommand = "/scombo";
 
+    private const string AddonName = "Wrath Combo - Edit by Velvet";
+
     /// <summary>
     ///     Registers the base commands for the plugin.<br />
     ///     Also displays the biggest commands in Dalamud.

@@ -143,7 +143,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
         P = this;
         pluginInterface.Create<Service>();
         ECommonsMain.Init(pluginInterface, this, Module.All);
-        PunishLibMain.Init(pluginInterface, "Wrath Combo");
+        PunishLibMain.Init(pluginInterface, AddonName);
 
         TM = new();
         RemoveNullAutos(); 
@@ -172,7 +172,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
 
         RegisterCommands();
 
-        DtrBarEntry ??= Svc.DtrBar.Get("Wrath Combo");
+        DtrBarEntry ??= Svc.DtrBar.Get(AddonName);
         DtrBarEntry.OnClick = () =>
         {
             ToggleAutoRotation(!Service.Configuration.RotationConfig.Enabled);
@@ -432,7 +432,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Used for non-static only window initialization")]
-    public string Name => "Wrath Combo";
+    public string Name => AddonName;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -451,7 +451,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
         Debug.Dispose();
 
         ws.RemoveAllWindows();
-        Svc.DtrBar.Remove("Wrath Combo");
+        Svc.DtrBar.Remove(AddonName);
         Svc.Framework.Update -= OnFrameworkUpdate;
         Svc.ClientState.TerritoryChanged -= ClientState_TerritoryChanged;
         Svc.PluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
