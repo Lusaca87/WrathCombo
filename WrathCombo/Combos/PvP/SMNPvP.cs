@@ -8,6 +8,8 @@ namespace WrathCombo.Combos.PvP
         public const byte ClassID = 26;
         public const byte JobID = 27;
 
+        internal class Role : PvPCaster;
+
         internal const uint
             Ruin3 = 29664,
             AstralImpulse = 29665,

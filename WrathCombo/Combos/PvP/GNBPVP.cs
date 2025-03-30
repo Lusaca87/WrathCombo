@@ -4,6 +4,7 @@ namespace WrathCombo.Combos.PvP
 {
     internal static class GNBPvP
     {
+        internal class Role : PvPTank;
 
         public const uint
             KeenEdge = 29098,

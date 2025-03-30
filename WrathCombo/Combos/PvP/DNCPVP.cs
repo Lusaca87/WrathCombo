@@ -8,6 +8,8 @@ namespace WrathCombo.Combos.PvP
     {
         public const byte JobID = 38;
 
+        internal class Role : PvPPhysRanged;
+
         internal const uint
             FountainCombo = 54,
             Cascade = 29416,

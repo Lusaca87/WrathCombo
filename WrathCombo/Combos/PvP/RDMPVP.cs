@@ -11,6 +11,8 @@ namespace WrathCombo.Combos.PvP
     {
         public const byte JobID = 35;
 
+        internal class Role : PvPCaster;
+
         public const uint
             EnchantedRiposte = 41488,
             Resolution = 41492,

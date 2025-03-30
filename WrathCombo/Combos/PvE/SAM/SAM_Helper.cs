@@ -17,10 +17,6 @@ internal partial class SAM
 
     internal static int MeikyoUsed => ActionWatching.CombatActions.Count(x => x == MeikyoShisui);
 
-    internal static bool TrueNorthReady =>
-        TargetNeedsPositionals() && ActionReady(All.TrueNorth) &&
-        !HasEffect(All.Buffs.TrueNorth);
-
     internal static float GCD => GetCooldown(Hakaze).CooldownTotal;
 
     internal static int SenCount => GetSenCount();
@@ -64,9 +60,9 @@ internal partial class SAM
 
     private static int GetNumSen()
     {
-        bool ka = Gauge.Sen.HasFlag(Sen.KA);
-        bool getsu = Gauge.Sen.HasFlag(Sen.GETSU);
-        bool setsu = Gauge.Sen.HasFlag(Sen.SETSU);
+        bool ka = Gauge.Sen.HasFlag(Sen.Ka);
+        bool getsu = Gauge.Sen.HasFlag(Sen.Getsu);
+        bool setsu = Gauge.Sen.HasFlag(Sen.Setsu);
 
         return (ka ? 1 : 0) + (getsu ? 1 : 0) + (setsu ? 1 : 0);
     }
@@ -123,6 +119,8 @@ internal partial class SAM
         return false;
     }
 
+    #region Openers
+
     internal class SAMOpenerMaxLevel1 : WrathOpener
     {
         public override int MinOpenerLevel => 100;
@@ -132,7 +130,7 @@ internal partial class SAM
         public override List<uint> OpenerActions { get; set; } =
         [
             MeikyoShisui,
-            All.TrueNorth, //2
+            Role.TrueNorth, //2
             Gekko,
             Kasha,
             Ikishoten,
@@ -157,6 +155,7 @@ internal partial class SAM
             TendoSetsugekka,
             TendoKaeshiSetsugekka
         ];
+
         internal override UserData ContentCheckConfig => Config.SAM_Balance_Content;
 
         public override List<(int[] Steps, Func<int> HoldDelay)> PrepullDelays { get; set; } =
@@ -169,23 +168,14 @@ internal partial class SAM
             ([2], 11, () => !TargetNeedsPositionals())
         ];
 
-        public override bool HasCooldowns()
-        {
-            if (GetRemainingCharges(MeikyoShisui) < 2)
-                return false;
-
-            if (GetRemainingCharges(All.TrueNorth) < 2)
-                return false;
-
-            if (!IsOffCooldown(Senei))
-                return false;
-
-            if (!IsOffCooldown(Ikishoten))
-                return false;
-
-            return true;
-        }
+        public override bool HasCooldowns() => 
+            GetRemainingCharges(MeikyoShisui) is 2 &&
+            GetRemainingCharges(Role.TrueNorth) is 2 &&
+            IsOffCooldown(Senei) && 
+            IsOffCooldown(Ikishoten);
     }
+
+    #endregion
 
     #region ID's
 

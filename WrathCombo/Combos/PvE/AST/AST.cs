@@ -2,13 +2,12 @@
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.ClientState.Statuses;
 using System.Linq;
-using WrathCombo.Combos.PvE.Content;
 using WrathCombo.CustomComboNS;
 using WrathCombo.Data;
 using WrathCombo.Extensions;
 namespace WrathCombo.Combos.PvE;
 
-internal static partial class AST
+internal partial class AST : HealerJob
 {
     internal class AST_Benefic : CustomCombo
     {
@@ -25,7 +24,7 @@ internal static partial class AST
         protected internal override CustomComboPreset Preset { get; } = CustomComboPreset.AST_Raise_Alternative;
 
         protected override uint Invoke(uint actionID) =>
-            actionID is All.Swiftcast && IsOnCooldown(All.Swiftcast)
+            actionID is Role.Swiftcast && IsOnCooldown(Role.Swiftcast)
                 ? Ascend
                 : actionID;
     }
@@ -39,7 +38,6 @@ internal static partial class AST
             bool alternateMode = GetIntOptionAsBool(Config.AST_DPS_AltMode); //(0 or 1 radio values)
             bool actionFound = !alternateMode && MaleficList.Contains(actionID) ||
                                alternateMode && CombustList.ContainsKey(actionID);
-            Status? sustainedDamage = FindTargetEffect(Variant.Debuffs.SustainedDamage);
 
             if (!actionFound)
                 return actionID;
@@ -49,7 +47,7 @@ internal static partial class AST
             {
                 if (IsEnabled(CustomComboPreset.AST_DPS_AutoDraw) &&
                     ActionReady(OriginalHook(AstralDraw)) &&
-                    (Gauge.DrawnCards.All(x => x is CardType.NONE) || DrawnCard == CardType.NONE && Config.AST_ST_DPS_OverwriteCards))
+                    (Gauge.DrawnCards.All(x => x is CardType.None) || DrawnCard == CardType.None && Config.AST_ST_DPS_OverwriteCards))
                     return OriginalHook(AstralDraw);
             }
 
@@ -61,17 +59,8 @@ internal static partial class AST
             if (InCombat())
             {
                 //Variant stuff
-                if (IsEnabled(CustomComboPreset.AST_Variant_Rampart) &&
-                    IsEnabled(Variant.VariantRampart) &&
-                    IsOffCooldown(Variant.VariantRampart) &&
-                    CanSpellWeave())
-                    return Variant.VariantRampart;
-
-                if (IsEnabled(CustomComboPreset.AST_Variant_SpiritDart) &&
-                    IsEnabled(Variant.VariantSpiritDart) &&
-                    (sustainedDamage is null || sustainedDamage.RemainingTime <= 3) &&
-                    CanSpellWeave())
-                    return Variant.VariantSpiritDart;
+                if (Variant.CanSpiritDart(CustomComboPreset.AST_Variant_Rampart))
+                    return Variant.SpiritDart;
 
                 if (IsEnabled(CustomComboPreset.AST_DPS_LightSpeed) &&
                     ActionReady(Lightspeed) &&
@@ -81,22 +70,20 @@ internal static partial class AST
                     return Lightspeed;
 
                 if (IsEnabled(CustomComboPreset.AST_DPS_Lucid) &&
-                    ActionReady(All.LucidDreaming) &&
-                    LocalPlayer.CurrentMp <= Config.AST_LucidDreaming &&
-                    CanSpellWeave())
-                    return All.LucidDreaming;
+                    Role.CanLucidDream(Config.AST_LucidDreaming))
+                    return Role.LucidDreaming;
 
                 //Play Card
                 if (IsEnabled(CustomComboPreset.AST_DPS_AutoPlay) &&
                     ActionReady(Play1) &&
-                    Gauge.DrawnCards[0] is not CardType.NONE &&
+                    Gauge.DrawnCards[0] is not CardType.None &&
                     CanSpellWeave())
                     return OriginalHook(Play1);
 
                 //Card Draw
                 if (IsEnabled(CustomComboPreset.AST_DPS_AutoDraw) &&
                     ActionReady(OriginalHook(AstralDraw)) &&
-                    (Gauge.DrawnCards.All(x => x is CardType.NONE) || DrawnCard == CardType.NONE && Config.AST_ST_DPS_OverwriteCards) &&
+                    (Gauge.DrawnCards.All(x => x is CardType.None) || DrawnCard == CardType.None && Config.AST_ST_DPS_OverwriteCards) &&
                     CanDelayedWeave())
                     return OriginalHook(AstralDraw);
 
@@ -124,7 +111,7 @@ internal static partial class AST
                 //Minor Arcana / Lord of Crowns
                 if (ActionReady(OriginalHook(MinorArcana)) &&
                     IsEnabled(CustomComboPreset.AST_DPS_LazyLord) &&
-                    Gauge.DrawnCrownCard is CardType.LORD &&
+                    Gauge.DrawnCrownCard is CardType.Lord &&
                     HasBattleTarget() && CanDelayedWeave())
                     return OriginalHook(MinorArcana);
 
@@ -136,11 +123,8 @@ internal static partial class AST
                         LevelChecked(Combust) &&
                         CombustList.TryGetValue(OriginalHook(Combust), out ushort dotDebuffID))
                     {
-                        if (IsEnabled(CustomComboPreset.AST_Variant_SpiritDart) &&
-                            IsEnabled(Variant.VariantSpiritDart) &&
-                            GetDebuffRemainingTime(Variant.Debuffs.SustainedDamage) <= 3 &&
-                            CanSpellWeave())
-                            return Variant.VariantSpiritDart;
+                        if (Variant.CanSpiritDart(CustomComboPreset.AST_Variant_SpiritDart))
+                            return Variant.SpiritDart;
 
                         float refreshTimer = Config.AST_ST_DPS_CombustUptime_Adv ? Config.AST_ST_DPS_CombustUptime_Threshold : 3;
                         int hpThreshold = Config.AST_ST_DPS_CombustSubOption == 1 || !InBossEncounter() ? Config.AST_DPS_CombustOption : 0;
@@ -167,19 +151,11 @@ internal static partial class AST
                 return actionID;
 
             //Variant stuff
-            if (IsEnabled(CustomComboPreset.AST_Variant_Rampart) &&
-                IsEnabled(Variant.VariantRampart) &&
-                IsOffCooldown(Variant.VariantRampart) &&
-                CanSpellWeave())
-                return Variant.VariantRampart;
+            if (Variant.CanRampart(CustomComboPreset.AST_Variant_Rampart))
+                return Variant.Rampart;
 
-            Status? sustainedDamage = FindTargetEffect(Variant.Debuffs.SustainedDamage);
-            if (IsEnabled(CustomComboPreset.AST_Variant_SpiritDart) &&
-                IsEnabled(Variant.VariantSpiritDart) &&
-                (sustainedDamage is null || sustainedDamage.RemainingTime <= 3) &&
-                CanSpellWeave() &&
-                IsEnabled(CustomComboPreset.AST_AOE_DPS) && GravityList.Contains(actionID))
-                return Variant.VariantSpiritDart;
+            if (Variant.CanSpiritDart(CustomComboPreset.AST_Variant_SpiritDart))
+                return Variant.SpiritDart;
 
             if (IsEnabled(CustomComboPreset.AST_AOE_LightSpeed) &&
                 ActionReady(Lightspeed) &&
@@ -189,22 +165,20 @@ internal static partial class AST
                 return Lightspeed;
 
             if (IsEnabled(CustomComboPreset.AST_AOE_Lucid) &&
-                ActionReady(All.LucidDreaming) &&
-                LocalPlayer.CurrentMp <= Config.AST_LucidDreaming &&
-                CanSpellWeave())
-                return All.LucidDreaming;
+                Role.CanLucidDream(Config.AST_LucidDreaming))
+                return Role.LucidDreaming;
 
             //Play Card
             if (IsEnabled(CustomComboPreset.AST_AOE_AutoPlay) &&
                 ActionReady(Play1) &&
-                Gauge.DrawnCards[0] is not CardType.NONE &&
+                Gauge.DrawnCards[0] is not CardType.None &&
                 CanSpellWeave())
                 return OriginalHook(Play1);
 
             //Card Draw
             if (IsEnabled(CustomComboPreset.AST_AOE_AutoDraw) &&
                 ActionReady(OriginalHook(AstralDraw)) &&
-                (Gauge.DrawnCards.All(x => x is CardType.NONE) || DrawnCard == CardType.NONE && Config.AST_AOE_DPS_OverwriteCards) &&
+                (Gauge.DrawnCards.All(x => x is CardType.None) || DrawnCard == CardType.None && Config.AST_AOE_DPS_OverwriteCards) &&
                 CanDelayedWeave())
                 return OriginalHook(AstralDraw);
 
@@ -230,7 +204,7 @@ internal static partial class AST
 
             //Minor Arcana / Lord of Crowns
             if (ActionReady(OriginalHook(MinorArcana)) &&
-                IsEnabled(CustomComboPreset.AST_AOE_LazyLord) && Gauge.DrawnCrownCard is CardType.LORD &&
+                IsEnabled(CustomComboPreset.AST_AOE_LazyLord) && Gauge.DrawnCrownCard is CardType.Lord &&
                 HasBattleTarget() &&
                 CanDelayedWeave())
                 return OriginalHook(MinorArcana);
@@ -259,7 +233,7 @@ internal static partial class AST
 
             if (IsEnabled(CustomComboPreset.AST_AoE_SimpleHeals_LazyLady) &&
                 ActionReady(MinorArcana) &&
-                Gauge.DrawnCrownCard is CardType.LADY
+                Gauge.DrawnCrownCard is CardType.Lady
                 && canLady)
                 return OriginalHook(MinorArcana);
 
@@ -319,34 +293,34 @@ internal static partial class AST
             //Grab our target (Soft->Hard->Self)
             IGameObject? healTarget = OptionalTarget ?? GetHealTarget(Config.AST_ST_SimpleHeals_Adv && Config.AST_ST_SimpleHeals_UIMouseOver);
 
-            if (IsEnabled(CustomComboPreset.AST_ST_SimpleHeals_Esuna) && ActionReady(All.Esuna) &&
+            if (IsEnabled(CustomComboPreset.AST_ST_SimpleHeals_Esuna) && ActionReady(Role.Esuna) &&
                 GetTargetHPPercent(healTarget, Config.AST_ST_SimpleHeals_IncludeShields) >= Config.AST_ST_SimpleHeals_Esuna &&
                 HasCleansableDebuff(healTarget))
-                return All.Esuna;
+                return Role.Esuna;
 
             if (IsEnabled(CustomComboPreset.AST_ST_SimpleHeals_Spire) &&
-                Gauge.DrawnCards[2] == CardType.SPIRE &&
+                Gauge.DrawnCards[2] == CardType.Spire &&
                 GetTargetHPPercent(healTarget, Config.AST_ST_SimpleHeals_IncludeShields) <= Config.AST_Spire &&
                 ActionReady(Play3) &&
                 canSpire)
                 return OriginalHook(Play3);
 
             if (IsEnabled(CustomComboPreset.AST_ST_SimpleHeals_Ewer) &&
-                Gauge.DrawnCards[2] == CardType.EWER &&
+                Gauge.DrawnCards[2] == CardType.Ewer &&
                 GetTargetHPPercent(healTarget, Config.AST_ST_SimpleHeals_IncludeShields) <= Config.AST_Ewer &&
                 ActionReady(Play3) &&
                 canEwer)
                 return OriginalHook(Play3);
 
             if (IsEnabled(CustomComboPreset.AST_ST_SimpleHeals_Arrow) &&
-                Gauge.DrawnCards[1] == CardType.ARROW &&
+                Gauge.DrawnCards[1] == CardType.Arrow &&
                 GetTargetHPPercent(healTarget, Config.AST_ST_SimpleHeals_IncludeShields) <= Config.AST_Arrow &&
                 ActionReady(Play2) &&
                 canArrow)
                 return OriginalHook(Play2);
 
             if (IsEnabled(CustomComboPreset.AST_ST_SimpleHeals_Bole) &&
-                Gauge.DrawnCards[1] == CardType.BOLE &&
+                Gauge.DrawnCards[1] == CardType.Bole &&
                 GetTargetHPPercent(healTarget, Config.AST_ST_SimpleHeals_IncludeShields) <= Config.AST_Bole &&
                 ActionReady(Play2) &&
                 canBole)

@@ -4,6 +4,8 @@ namespace WrathCombo.Combos.PvP
 {
     internal class DRKPvP
     {
+        internal class Role : PvPTank;
+
         public const uint
             HardSlash = 29085,
             SyphonStrike = 29086,

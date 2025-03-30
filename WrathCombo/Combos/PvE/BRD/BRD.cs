@@ -2,19 +2,18 @@ using Dalamud.Game.ClientState.JobGauge.Enums;
 using Dalamud.Game.ClientState.JobGauge.Types;
 using Dalamud.Game.ClientState.Statuses;
 using System;
-using WrathCombo.Combos.PvE.Content;
 using WrathCombo.Core;
 using WrathCombo.CustomComboNS;
 using WrathCombo.Data;
 
 namespace WrathCombo.Combos.PvE;
 
-internal partial class BRD
+internal partial class BRD : PhysRangedJob
 {
     #region Song status
-    internal static bool SongIsNotNone(Song value) => value != Song.NONE;
-    internal static bool SongIsNone(Song value) => value == Song.NONE;
-    internal static bool SongIsWandererMinuet(Song value) => value == Song.WANDERER;
+    internal static bool SongIsNotNone(Song value) => value != Song.None;
+    internal static bool SongIsNone(Song value) => value == Song.None;
+    internal static bool SongIsWandererMinuet(Song value) => value == Song.Wanderer;
     #endregion
 
     #region Smaller features
@@ -142,8 +141,8 @@ internal partial class BRD
                 return actionID;
 
             BRDGauge? gauge = GetJobGauge<BRDGauge>();
-            bool songArmy = gauge.Song == Song.ARMY;
-            bool songWanderer = gauge.Song == Song.WANDERER;
+            bool songArmy = gauge.Song == Song.Army;
+            bool songWanderer = gauge.Song == Song.Wanderer;
 
             if (IsEnabled(CustomComboPreset.BRD_AoE_oGCD_Songs) && (gauge.SongTimer < 1 || songArmy))
             {
@@ -178,8 +177,8 @@ internal partial class BRD
                 return actionID;
 
             BRDGauge? gauge = GetJobGauge<BRDGauge>();
-            bool songArmy = gauge.Song == Song.ARMY;
-            bool songWanderer = gauge.Song == Song.WANDERER;
+            bool songArmy = gauge.Song == Song.Army;
+            bool songWanderer = gauge.Song == Song.Wanderer;
 
             if (IsEnabled(CustomComboPreset.BRD_ST_oGCD_Songs) && (gauge.SongTimer < 1 || songArmy))
             {
@@ -263,13 +262,13 @@ internal partial class BRD
             BRDGauge? gauge = GetJobGauge<BRDGauge>();
             int songTimerInSeconds = gauge.SongTimer / 1000;
 
-            if (ActionReady(WanderersMinuet) || (gauge.Song == Song.WANDERER && songTimerInSeconds > 11))
+            if (ActionReady(WanderersMinuet) || (gauge.Song == Song.Wanderer && songTimerInSeconds > 11))
                 return WanderersMinuet;
 
-            if (ActionReady(MagesBallad) || (gauge.Song == Song.MAGE && songTimerInSeconds > 2))
+            if (ActionReady(MagesBallad) || (gauge.Song == Song.Mage && songTimerInSeconds > 2))
                 return MagesBallad;
 
-            if (ActionReady(ArmysPaeon) || (gauge.Song == Song.ARMY && songTimerInSeconds > 2))
+            if (ActionReady(ArmysPaeon) || (gauge.Song == Song.Army && songTimerInSeconds > 2))
                 return ArmysPaeon;
 
             return actionID;
@@ -291,24 +290,25 @@ internal partial class BRD
             bool canWeave = CanWeave() && !ActionWatching.HasDoubleWeaved();
             bool canWeaveDelayed = CanDelayedWeave(0.9) && !ActionWatching.HasDoubleWeaved();
             int songTimerInSeconds = gauge.SongTimer / 1000;
-            bool songNone = gauge.Song == Song.NONE;
-            bool songWanderer = gauge.Song == Song.WANDERER;
-            bool songMage = gauge.Song == Song.MAGE;
-            bool songArmy = gauge.Song == Song.ARMY;
+            bool songNone = gauge.Song == Song.None;
+            bool songWanderer = gauge.Song == Song.Wanderer;
+            bool songMage = gauge.Song == Song.Mage;
+            bool songArmy = gauge.Song == Song.Army;
             int targetHPThreshold = PluginConfiguration.GetCustomIntValue(Config.BRD_AoENoWasteHPPercentage);
             bool isEnemyHealthHigh = !IsEnabled(CustomComboPreset.BRD_AoE_Adv_NoWaste) || GetTargetHPPercent() > targetHPThreshold;
             bool hasTarget = HasBattleTarget();
+            bool ragingEnabled = IsEnabled(CustomComboPreset.BRD_AoE_Adv_Buffs_Raging);
+            bool battleVoiceEnabled = IsEnabled(CustomComboPreset.BRD_AoE_Adv_Buffs_Battlevoice);
+            bool barrageEnabled = IsEnabled(CustomComboPreset.BRD_AoE_Adv_Buffs_Barrage);
+            bool radiantEnabled = IsEnabled(CustomComboPreset.BRD_AoE_Adv_Buffs_RadiantFinale);
 
             #region Variants
 
-            if (IsEnabled(CustomComboPreset.BRD_Variant_Cure) && IsEnabled(Variant.VariantCure) && PlayerHealthPercentageHp() <= GetOptionValue(Config.BRD_VariantCure))
-                return Variant.VariantCure;
+            if (Variant.CanCure(CustomComboPreset.BRD_Variant_Cure ,Config.BRD_VariantCure))
+                return Variant.Cure;
 
-            if (IsEnabled(CustomComboPreset.BRD_Variant_Rampart) &&
-                IsEnabled(Variant.VariantRampart) &&
-                IsOffCooldown(Variant.VariantRampart) &&
-                canWeave)
-                return Variant.VariantRampart;
+            if (Variant.CanRampart(CustomComboPreset.BRD_Variant_Rampart, WeaveTypes.Weave))
+                return Variant.Rampart;
 
             #endregion
 
@@ -378,21 +378,21 @@ internal partial class BRD
                 float ragingCD = GetCooldownRemainingTime(RagingStrikes);
 
                // Radiant First with late weave for tighter grouping
-                if (canWeaveDelayed && ActionReady(RadiantFinale) && ragingCD < 2.3 &&
+                if (radiantEnabled && canWeaveDelayed && ActionReady(RadiantFinale) && (ragingCD < 2.3 || !ragingEnabled) &&
                 !HasEffect(Buffs.RadiantEncoreReady) &&
                 (Array.TrueForAll(gauge.Coda, SongIsNotNone) || Array.Exists(gauge.Coda, SongIsWandererMinuet)))
                     return RadiantFinale;
 
                 // BV normal weave into the raging weave
-                if (canWeave && ActionReady(BattleVoice) && (HasEffect(Buffs.RadiantFinale) || !LevelChecked(RadiantFinale)))
+                if (battleVoiceEnabled && canWeave && ActionReady(BattleVoice) && (HasEffect(Buffs.RadiantFinale) || !LevelChecked(RadiantFinale) || !radiantEnabled))
                     return BattleVoice;
 
                 // Late weave Raging last, must have battle voice buff OR not be high enough level for Battlecoice
-                if (canWeave && ActionReady(RagingStrikes) && (JustUsed(BattleVoice) || !LevelChecked(BattleVoice) || HasEffect(Buffs.BattleVoice)))
+                if (ragingEnabled && canWeave && ActionReady(RagingStrikes) && (JustUsed(BattleVoice) || !LevelChecked(BattleVoice) || HasEffect(Buffs.BattleVoice) || !battleVoiceEnabled))
                     return RagingStrikes;
 
                 // Barrage Logic to check for raging for low level reasons and it doesn't really need to check for the other buffs
-                if (canWeave && ActionReady(Barrage) && HasEffect(Buffs.RagingStrikes) &&
+                if (barrageEnabled && canWeave && ActionReady(Barrage) && (HasEffect(Buffs.RagingStrikes) || !ragingEnabled) &&
                     !HasEffect(Buffs.ResonantArrowReady))
                     return Barrage;
 
@@ -430,8 +430,8 @@ internal partial class BRD
             }
 
             // Interupt Logic, set to delayed weave. Let someone else do it if they want. Better to be last line of defense and stay off cd.
-            if (IsEnabled(CustomComboPreset.BRD_AoE_Adv_Interrupt) && CanInterruptEnemy() && IsOffCooldown(All.HeadGraze) && canWeaveDelayed)
-                return All.HeadGraze;
+            if (Role.CanHeadGraze(CustomComboPreset.BRD_AoE_Adv_Interrupt, WeaveTypes.None) && canWeaveDelayed)
+                return Role.HeadGraze;
 
             // Rain of death Logic
             if (canWeave && IsEnabled(CustomComboPreset.BRD_AoE_Adv_oGCD))
@@ -474,11 +474,8 @@ internal partial class BRD
 
             if (canWeave)
             {
-                if (IsEnabled(CustomComboPreset.BRD_ST_SecondWind))
-                {
-                    if (PlayerHealthPercentageHp() <= PluginConfiguration.GetCustomIntValue(Config.BRD_STSecondWindThreshold) && ActionReady(All.SecondWind))
-                        return All.SecondWind;
-                }
+                if (IsEnabled(CustomComboPreset.BRD_ST_SecondWind) && Role.CanSecondWind(Config.BRD_STSecondWindThreshold))
+                    return Role.SecondWind;
 
                 if (IsEnabled(CustomComboPreset.BRD_ST_Wardens))
                 {
@@ -545,26 +542,27 @@ internal partial class BRD
             BRDGauge? gauge = GetJobGauge<BRDGauge>();
             bool canWeave = CanWeave() && !ActionWatching.HasDoubleWeaved();
             bool canWeaveDelayed = CanDelayedWeave(0.9) && !ActionWatching.HasDoubleWeaved();
-            bool songNone = gauge.Song == Song.NONE;
-            bool songWanderer = gauge.Song == Song.WANDERER;
-            bool songMage = gauge.Song == Song.MAGE;
-            bool songArmy = gauge.Song == Song.ARMY;
+            bool songNone = gauge.Song == Song.None;
+            bool songWanderer = gauge.Song == Song.Wanderer;
+            bool songMage = gauge.Song == Song.Mage;
+            bool songArmy = gauge.Song == Song.Army;
             int songTimerInSeconds = gauge.SongTimer / 1000;
             int targetHPThreshold = PluginConfiguration.GetCustomIntValue(Config.BRD_NoWasteHPPercentage);
             bool isEnemyHealthHigh = !IsEnabled(CustomComboPreset.BRD_Adv_NoWaste) || GetTargetHPPercent() > targetHPThreshold;
             bool hasTarget = HasBattleTarget();
             bool buffTime = GetCooldownRemainingTime(RagingStrikes) < 2.7;
+            bool ragingEnabled = IsEnabled(CustomComboPreset.BRD_Adv_Buffs_Raging);
+            bool battleVoiceEnabled = IsEnabled(CustomComboPreset.BRD_Adv_Buffs_Battlevoice);
+            bool barrageEnabled = IsEnabled(CustomComboPreset.BRD_Adv_Buffs_Barrage);
+            bool radiantEnabled = IsEnabled(CustomComboPreset.BRD_Adv_Buffs_RadiantFinale);
 
             #region Variants
 
-            if (IsEnabled(CustomComboPreset.BRD_Variant_Cure) && IsEnabled(Variant.VariantCure) && PlayerHealthPercentageHp() <= GetOptionValue(Config.BRD_VariantCure))
-                return Variant.VariantCure;
+            if (Variant.CanCure(CustomComboPreset.BRD_Variant_Cure, Config.BRD_VariantCure))
+                return Variant.Cure;
 
-            if (IsEnabled(CustomComboPreset.BRD_Variant_Rampart) &&
-                IsEnabled(Variant.VariantRampart) &&
-                IsOffCooldown(Variant.VariantRampart) &&
-                canWeave)
-                return Variant.VariantRampart;
+            if (Variant.CanRampart(CustomComboPreset.BRD_Variant_Rampart, WeaveTypes.Weave))
+                return Variant.Rampart;
 
             #endregion
 
@@ -653,21 +651,21 @@ internal partial class BRD
                 float ragingCD = GetCooldownRemainingTime(RagingStrikes);
 
                 // Radiant First with late weave for tighter grouping
-                if (canWeaveDelayed && ActionReady(RadiantFinale) && ragingCD < 2.3 &&
+                if (radiantEnabled && canWeaveDelayed && ActionReady(RadiantFinale) && (ragingCD < 2.3 || !ragingEnabled) &&
                 !HasEffect(Buffs.RadiantEncoreReady) &&
                 (Array.TrueForAll(gauge.Coda, SongIsNotNone) || Array.Exists(gauge.Coda, SongIsWandererMinuet)))
                     return RadiantFinale;
 
                 // BV normal weave into the raging weave
-                if (canWeave && ActionReady(BattleVoice) && (HasEffect(Buffs.RadiantFinale) || !LevelChecked(RadiantFinale)))
+                if (battleVoiceEnabled && canWeave && ActionReady(BattleVoice) && (HasEffect(Buffs.RadiantFinale) || !LevelChecked(RadiantFinale) || !radiantEnabled))
                     return BattleVoice;
 
                 // Late weave Raging last, must have battle voice buff OR not be high enough level for Battlecoice
-                if (canWeave && ActionReady(RagingStrikes) && (JustUsed(BattleVoice) || !LevelChecked(BattleVoice) || HasEffect(Buffs.BattleVoice)))
+                if (ragingEnabled && canWeave && ActionReady(RagingStrikes) && (JustUsed(BattleVoice) || !LevelChecked(BattleVoice) || HasEffect(Buffs.BattleVoice) || !battleVoiceEnabled))
                     return RagingStrikes;
 
                 // Barrage Logic to check for raging for low level reasons and it doesn't really need to check for the other buffs
-                if (canWeave && ActionReady(Barrage) && HasEffect(Buffs.RagingStrikes) &&
+                if (barrageEnabled && canWeave && ActionReady(Barrage) && (HasEffect(Buffs.RagingStrikes) || !ragingEnabled) &&
                     !HasEffect(Buffs.ResonantArrowReady))
                     return Barrage;
 
@@ -709,8 +707,8 @@ internal partial class BRD
                 }
             }
             //Interupt Logic, set to delayed weave. Let someone else do it if they want. Better to be last line of defense and stay off cd.
-            if (IsEnabled(CustomComboPreset.BRD_Adv_Interrupt) && CanInterruptEnemy() && IsOffCooldown(All.HeadGraze) && canWeaveDelayed)
-                return All.HeadGraze;
+            if (Role.CanHeadGraze(CustomComboPreset.BRD_Adv_Interrupt, WeaveTypes.None) && canWeaveDelayed)
+                return Role.HeadGraze;
 
             // Bloodletter pooling logic. Will Pool as buffs are coming up.
             if (canWeave && IsEnabled(CustomComboPreset.BRD_ST_Adv_oGCD))
@@ -748,11 +746,8 @@ internal partial class BRD
             #region Self Care
             if (canWeave)
             {
-                if (IsEnabled(CustomComboPreset.BRD_ST_SecondWind))
-                {
-                    if (PlayerHealthPercentageHp() <= PluginConfiguration.GetCustomIntValue(Config.BRD_STSecondWindThreshold) && ActionReady(All.SecondWind))
-                        return All.SecondWind;
-                }
+                if (IsEnabled(CustomComboPreset.BRD_ST_SecondWind) && Role.CanSecondWind(Config.BRD_STSecondWindThreshold))
+                    return Role.SecondWind;
 
                 if (IsEnabled(CustomComboPreset.BRD_ST_Wardens))
                 {
@@ -853,23 +848,21 @@ internal partial class BRD
             bool canWeave = CanWeave() && !ActionWatching.HasDoubleWeaved();
             bool canWeaveDelayed = CanDelayedWeave(0.9) && !ActionWatching.HasDoubleWeaved();
             int songTimerInSeconds = gauge.SongTimer / 1000;
-            bool songNone = gauge.Song == Song.NONE;
-            bool songWanderer = gauge.Song == Song.WANDERER;
-            bool songMage = gauge.Song == Song.MAGE;
-            bool songArmy = gauge.Song == Song.ARMY;
+            bool songNone = gauge.Song == Song.None;
+            bool songWanderer = gauge.Song == Song.Wanderer;
+            bool songMage = gauge.Song == Song.Mage;
+            bool songArmy = gauge.Song == Song.Army;
             int targetHPThreshold = PluginConfiguration.GetCustomIntValue(Config.BRD_AoENoWasteHPPercentage);
             bool isEnemyHealthHigh = GetTargetHPPercent() > 5;
             bool hasTarget = HasBattleTarget();
 
             #region Variants
 
-            if (IsEnabled(Variant.VariantCure) && PlayerHealthPercentageHp() <= 50)
-                return Variant.VariantCure;
+            if (Variant.CanCure(CustomComboPreset.BRD_Variant_Cure, 50))
+                return Variant.Cure;
 
-            if (IsEnabled(Variant.VariantRampart) &&
-                IsOffCooldown(Variant.VariantRampart) &&
-                canWeave)
-                return Variant.VariantRampart;
+            if (Variant.CanRampart(CustomComboPreset.BRD_Variant_Rampart, WeaveTypes.Weave))
+                return Variant.Rampart;
 
             #endregion
 
@@ -993,8 +986,8 @@ internal partial class BRD
                 }
 
                 // Interupt
-                if (CanInterruptEnemy() && IsOffCooldown(All.HeadGraze) && canWeaveDelayed)
-                    return All.HeadGraze;
+                if (Role.CanHeadGraze(CustomComboPreset.BRD_AoE_SimpleMode) && canWeaveDelayed)
+                    return Role.HeadGraze;
 
                 // Pooling logic for rain of death basied on song
                 if (LevelChecked(RainOfDeath) && !WasLastAction(RainOfDeath) && (empyrealCD > 1 || !LevelChecked(EmpyrealArrow)))
@@ -1030,8 +1023,8 @@ internal partial class BRD
 
                 // Self care section for healing and debuff removal
 
-                if (PlayerHealthPercentageHp() <= 40 && ActionReady(All.SecondWind))
-                    return All.SecondWind;
+                if (Role.CanSecondWind(40))
+                    return Role.SecondWind;
 
                 if (ActionReady(TheWardensPaeon) && HasCleansableDebuff(LocalPlayer))
                     return OriginalHook(TheWardensPaeon);
@@ -1075,22 +1068,20 @@ internal partial class BRD
             BRDGauge? gauge = GetJobGauge<BRDGauge>();
             bool canWeave = CanWeave() && !ActionWatching.HasDoubleWeaved();
             bool canWeaveDelayed = CanDelayedWeave(0.9) && !ActionWatching.HasDoubleWeaved();
-            bool songNone = gauge.Song == Song.NONE;
-            bool songWanderer = gauge.Song == Song.WANDERER;
-            bool songMage = gauge.Song == Song.MAGE;
-            bool songArmy = gauge.Song == Song.ARMY;
+            bool songNone = gauge.Song == Song.None;
+            bool songWanderer = gauge.Song == Song.Wanderer;
+            bool songMage = gauge.Song == Song.Mage;
+            bool songArmy = gauge.Song == Song.Army;
             bool isEnemyHealthHigh = GetTargetHPPercent() > 1;
             int songTimerInSeconds = gauge.SongTimer / 1000;
             bool hasTarget = HasBattleTarget();
 
             #region Variants
-            if (IsEnabled(Variant.VariantCure) && PlayerHealthPercentageHp() <= 50)
-                return Variant.VariantCure;
+            if (Variant.CanCure(CustomComboPreset.BRD_Variant_Cure, 50))
+                return Variant.Cure;
 
-            if (IsEnabled(Variant.VariantRampart) &&
-                IsOffCooldown(Variant.VariantRampart) &&
-                canWeave)
-                return Variant.VariantRampart;
+            if (Variant.CanRampart(CustomComboPreset.BRD_Variant_Rampart, WeaveTypes.Weave))
+                return Variant.Rampart;
             #endregion
 
             #region Songs
@@ -1218,8 +1209,8 @@ internal partial class BRD
                 }
 
                 //Interupt delayered weave
-                if (CanInterruptEnemy() && IsOffCooldown(All.HeadGraze) && canWeaveDelayed)
-                    return All.HeadGraze;
+                if (Role.CanHeadGraze(CustomComboPreset.BRD_ST_SimpleMode, WeaveTypes.None) && canWeaveDelayed)
+                    return Role.HeadGraze;
 
                 // Bloodletter pooling logic
                 if (ActionReady(Bloodletter) && !(WasLastAction(Bloodletter) || WasLastAction(HeartbreakShot)) && (empyrealCD > 1 || !LevelChecked(EmpyrealArrow)))
@@ -1252,8 +1243,8 @@ internal partial class BRD
 
                 // Self Care
 
-                if (PlayerHealthPercentageHp() <= 40 && ActionReady(All.SecondWind))
-                    return All.SecondWind;
+                if (Role.CanSecondWind(40))
+                    return Role.SecondWind;
 
                 if (ActionReady(TheWardensPaeon) && HasCleansableDebuff(LocalPlayer))
                     return OriginalHook(TheWardensPaeon);

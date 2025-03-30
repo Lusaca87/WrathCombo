@@ -7,6 +7,8 @@ namespace WrathCombo.Combos.PvP
         public const byte ClassID = 2;
         public const byte JobID = 20;
 
+        internal class Role : PvPMelee;
+
         public const uint
             PhantomRushCombo = 55,
             DragonKick = 29475,

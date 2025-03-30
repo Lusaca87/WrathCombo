@@ -7,6 +7,8 @@ namespace WrathCombo.Combos.PvP
     {
         public const byte JobID = 34;
 
+        internal class Role : PvPMelee;
+
         public const uint
             KashaCombo = 58,
             Yukikaze = 29523,

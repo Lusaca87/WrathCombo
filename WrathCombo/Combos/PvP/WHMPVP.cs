@@ -9,6 +9,8 @@ namespace WrathCombo.Combos.PvP
     {
         public const byte JobID = 24;
 
+        internal class Role : PvPHealer;
+
         public const uint
             Glare = 29223,
             Cure2 = 29224,

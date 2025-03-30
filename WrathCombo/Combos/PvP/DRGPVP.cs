@@ -7,6 +7,8 @@ namespace WrathCombo.Combos.PvP
         public const byte ClassID = 4;
         public const byte JobID = 22;
 
+        internal class Role : PvPMelee;
+
         public const uint
             WheelingThrustCombo = 56,
             RaidenThrust = 29486,

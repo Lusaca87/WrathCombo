@@ -7,6 +7,8 @@ namespace WrathCombo.Combos.PvP
     internal static class BLMPvP
     {
         public const byte JobID = 25;
+        
+        internal class Role : PvPCaster;
 
         public const uint
             Fire = 29649,

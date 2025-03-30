@@ -14,11 +14,6 @@ internal partial class RPR
 
     internal static float GCD => GetCooldown(Slice).CooldownTotal;
 
-    internal static bool TrueNorthReady =>
-        TargetNeedsPositionals() &&
-        ActionReady(All.TrueNorth) &&
-        !HasEffect(All.Buffs.TrueNorth);
-
     internal static WrathOpener Opener()
     {
         if (Opener1.LevelChecked)
@@ -86,40 +81,80 @@ internal partial class RPR
             !HasEffect(Buffs.ImmortalSacrifice) && !IsComboExpiring(3) &&
             !JustUsed(ShadowOfDeath))
         {
-            //1st part double enshroud
-            if (LevelChecked(PlentifulHarvest) && HasEffect(Buffs.Enshrouded) &&
-                GetCooldownRemainingTime(ArcaneCircle) <= GCD * 2 + 1.5 && JustUsed(Enshroud))
-                return true;
+            if (IsEnabled(CustomComboPreset.RPR_ST_SimpleMode))
+            {
+                if (!InBossEncounter() && LevelChecked(PlentifulHarvest) && !HasEffect(Buffs.Enshrouded) &&
+                    GetDebuffRemainingTime(Debuffs.DeathsDesign) <= 8)
+                    return true;
 
-            //2nd part double enshroud
-            if (LevelChecked(PlentifulHarvest) && HasEffect(Buffs.Enshrouded) &&
-                (GetCooldownRemainingTime(ArcaneCircle) <= GCD || IsOffCooldown(ArcaneCircle)) &&
-                (JustUsed(VoidReaping) || JustUsed(CrossReaping)))
-                return true;
+                if (InBossEncounter())
+                {
+                    //1st part double enshroud
+                    if (LevelChecked(PlentifulHarvest) && HasEffect(Buffs.Enshrouded) &&
+                        GetCooldownRemainingTime(ArcaneCircle) <= GCD * 2 + 1.5 && JustUsed(Enshroud))
+                        return true;
 
-            //lvl 88+ general use
-            if (LevelChecked(PlentifulHarvest) && !HasEffect(Buffs.Enshrouded) &&
-                (IsEnabled(CustomComboPreset.RPR_ST_SimpleMode) &&
-                 GetDebuffRemainingTime(Debuffs.DeathsDesign) <= 8 ||
-                 IsEnabled(CustomComboPreset.RPR_ST_AdvancedMode) &&
-                 GetDebuffRemainingTime(Debuffs.DeathsDesign) <= Config.RPR_SoDRefreshRange) &&
-                (GetCooldownRemainingTime(ArcaneCircle) > GCD * 8 || IsOffCooldown(ArcaneCircle)))
-                return true;
+                    //2nd part double enshroud
+                    if (LevelChecked(PlentifulHarvest) && HasEffect(Buffs.Enshrouded) &&
+                        (GetCooldownRemainingTime(ArcaneCircle) <= GCD || IsOffCooldown(ArcaneCircle)) &&
+                        (JustUsed(VoidReaping) || JustUsed(CrossReaping)))
+                        return true;
 
-            //below lvl 88 use
-            if (!LevelChecked(PlentifulHarvest) &&
-                (IsEnabled(CustomComboPreset.RPR_ST_SimpleMode) &&
-                 GetDebuffRemainingTime(Debuffs.DeathsDesign) <= 8 ||
-                 IsEnabled(CustomComboPreset.RPR_ST_AdvancedMode) &&
-                 GetDebuffRemainingTime(Debuffs.DeathsDesign) <= Config.RPR_SoDRefreshRange))
-                return true;
+                    //lvl 88+ general use
+                    if (LevelChecked(PlentifulHarvest) && !HasEffect(Buffs.Enshrouded) &&
+                        GetDebuffRemainingTime(Debuffs.DeathsDesign) <= 8 &&
+                        (GetCooldownRemainingTime(ArcaneCircle) > GCD * 8 || IsOffCooldown(ArcaneCircle)))
+                        return true;
+
+                    //below lvl 88 use
+                    if (!LevelChecked(PlentifulHarvest) &&
+                        GetDebuffRemainingTime(Debuffs.DeathsDesign) <= 8)
+                        return true;
+                }
+            }
+
+            if (IsEnabled(CustomComboPreset.RPR_ST_AdvancedMode))
+            {
+                if (Config.RPR_ST_ArcaneCircle_SubOption == 1 && !InBossEncounter())
+                {
+                    if (LevelChecked(PlentifulHarvest) && !HasEffect(Buffs.Enshrouded) &&
+                        GetDebuffRemainingTime(Debuffs.DeathsDesign) <= Config.RPR_SoDRefreshRange)
+                        return true;
+                }
+
+                if (Config.RPR_ST_ArcaneCircle_SubOption == 0 ||
+                    Config.RPR_ST_ArcaneCircle_SubOption == 1 && InBossEncounter())
+                {
+                    //1st part double enshroud
+                    if (LevelChecked(PlentifulHarvest) && HasEffect(Buffs.Enshrouded) &&
+                        GetCooldownRemainingTime(ArcaneCircle) <= GCD * 2 + 1.5 && JustUsed(Enshroud))
+                        return true;
+
+                    //2nd part double enshroud
+                    if (LevelChecked(PlentifulHarvest) && HasEffect(Buffs.Enshrouded) &&
+                        (GetCooldownRemainingTime(ArcaneCircle) <= GCD || IsOffCooldown(ArcaneCircle)) &&
+                        (JustUsed(VoidReaping) || JustUsed(CrossReaping)))
+                        return true;
+
+                    //lvl 88+ general use
+                    if (LevelChecked(PlentifulHarvest) && !HasEffect(Buffs.Enshrouded) &&
+                        GetDebuffRemainingTime(Debuffs.DeathsDesign) <= Config.RPR_SoDRefreshRange &&
+                        (GetCooldownRemainingTime(ArcaneCircle) > GCD * 8 || IsOffCooldown(ArcaneCircle)))
+                        return true;
+
+                    //below lvl 88 use
+                    if (!LevelChecked(PlentifulHarvest) &&
+                        GetDebuffRemainingTime(Debuffs.DeathsDesign) <= Config.RPR_SoDRefreshRange)
+                        return true;
+                }
+            }
         }
 
         return false;
     }
 
     #region Openers
-    
+
     internal class RPROpenerMaxLevel1 : WrathOpener
     {
         public override int MinOpenerLevel => 100;
@@ -128,6 +163,7 @@ internal partial class RPR
 
         public override List<uint> OpenerActions { get; set; } =
         [
+            Harpe,
             ShadowOfDeath,
             SoulSlice,
             ArcaneCircle,
@@ -152,6 +188,11 @@ internal partial class RPR
             Slice
         ];
 
+        public override List<(int[] Steps, Func<bool> Condition)> SkipSteps { get; set; } =
+        [
+            ([1], () => Config.RPR_Opener_StartChoice == 1)
+        ];
+
         public override List<(int[], uint, Func<bool>)> SubstitutionSteps { get; set; } =
         [
             ([5], ExecutionersGallows, () => OnTargetsRear()),
@@ -159,24 +200,15 @@ internal partial class RPR
             ([19], UnveiledGallows, () => HasEffect(Buffs.EnhancedGallows)),
             ([20], Gallows, () => HasEffect(Buffs.EnhancedGallows))
         ];
-        
+
         internal override UserData ContentCheckConfig => Config.RPR_Balance_Content;
 
-        public override bool HasCooldowns()
-        {
-            if (GetRemainingCharges(SoulSlice) < 2)
-                return false;
-
-            if (!IsOffCooldown(ArcaneCircle))
-                return false;
-
-            if (!IsOffCooldown(Gluttony))
-                return false;
-
-            return true;
-        }
+        public override bool HasCooldowns() => 
+            GetRemainingCharges(SoulSlice) is 2 &&
+            IsOffCooldown(ArcaneCircle) &&
+            IsOffCooldown(Gluttony);
     }
-    
+
     #endregion
 
     #region ID's

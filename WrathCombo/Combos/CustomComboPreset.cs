@@ -30,7 +30,7 @@ public enum CustomComboPreset
     ALL_Tank_Menu = 100099,
 
     [Role(JobRole.Tank)]
-    [ReplaceSkill(All.LowBlow, PLD.ShieldBash)]
+    [ReplaceSkill(Tank.LowBlow, PLD.ShieldBash)]
     [ParentCombo(ALL_Tank_Menu)]
     [CustomComboInfo("Tank: Interrupt Feature",
         "Replaces Low Blow (Stun) with Interject (Interrupt) when the target can be interrupted.\nPLDs can slot Shield Bash to have the feature to work with Shield Bash.",
@@ -38,7 +38,7 @@ public enum CustomComboPreset
     ALL_Tank_Interrupt = 100000,
 
     [Role(JobRole.Tank)]
-    [ReplaceSkill(All.Reprisal)]
+    [ReplaceSkill(Tank.Reprisal)]
     [ParentCombo(ALL_Tank_Menu)]
     [CustomComboInfo("Tank: Double Reprisal Protection",
         "Prevents the use of Reprisal when target already has the effect by replacing it with Savage Blade.", ADV.JobID)]
@@ -72,7 +72,7 @@ public enum CustomComboPreset
     ALL_Caster_Menu = 100097,
 
     [Role(JobRole.MagicalDPS)]
-    [ReplaceSkill(All.Addle)]
+    [ReplaceSkill(Caster.Addle)]
     [ParentCombo(ALL_Caster_Menu)]
     [CustomComboInfo("Magical Ranged DPS: Double Addle Protection",
         "Prevents the use of Addle when target already has the effect by replacing it with Savage Blade.", ADV.JobID)]
@@ -98,14 +98,14 @@ public enum CustomComboPreset
     ALL_Melee_Menu = 100096,
 
     [Role(JobRole.MeleeDPS)]
-    [ReplaceSkill(All.Feint)]
+    [ReplaceSkill(Melee.Feint)]
     [ParentCombo(ALL_Melee_Menu)]
     [CustomComboInfo("Melee DPS: Double Feint Protection",
         "Prevents the use of Feint when target already has the effect by replacing it with Savage Blade.", ADV.JobID)]
     ALL_Melee_Feint = 100030,
 
     [Role(JobRole.MeleeDPS)]
-    [ReplaceSkill(All.TrueNorth)]
+    [ReplaceSkill(Melee.TrueNorth)]
     [ParentCombo(ALL_Melee_Menu)]
     [CustomComboInfo("Melee DPS: True North Protection",
         "Prevents the use of True North when its buff is already active by replacing it with Savage Blade.", ADV.JobID)]
@@ -130,7 +130,7 @@ public enum CustomComboPreset
     ALL_Ranged_Mitigation = 100040,
 
     [Role(JobRole.RangedDPS)]
-    [ReplaceSkill(All.FootGraze)]
+    [ReplaceSkill(PhysRanged.FootGraze)]
     [ParentCombo(ALL_Ranged_Menu)]
     [CustomComboInfo("Physical Ranged DPS: Ranged Interrupt Feature",
         "Replaces Foot Graze with Head Graze when target can be interrupted.", ADV.JobID)]
@@ -325,7 +325,7 @@ public enum CustomComboPreset
 
     #region Utility
 
-    [ReplaceSkill(All.Swiftcast)]
+    [ReplaceSkill(MagicRole.Swiftcast)]
     [ConflictingCombos(ALL_Healer_Raise)]
     [CustomComboInfo("Alternative Raise Feature", "Changes Swiftcast to Ascend", AST.JobID)]
     AST_Raise_Alternative = 1003,
@@ -766,8 +766,24 @@ public enum CustomComboPreset
     BRD_Adv_Song = 3011,
 
     [ParentCombo(BRD_ST_AdvMode)]
-    [CustomComboInfo("Buffs Option", "Adds buffs onto the Advanced Bard feature.", BRD.JobID)]
+    [CustomComboInfo("Buffs Option", "Adds buffs onto the Advanced Bard feature. \nBuffs have specific timing with each other intended to follow balance. \nDisabling only one can lead to unwanted results", BRD.JobID)]
     BRD_Adv_Buffs = 3017,
+
+    [ParentCombo(BRD_Adv_Buffs)]
+    [CustomComboInfo("Raging Strikes Option", "Adds Raging Strikes", BRD.JobID)]
+    BRD_Adv_Buffs_Raging = 3049,
+
+    [ParentCombo(BRD_Adv_Buffs)]
+    [CustomComboInfo("Battlevoice Option", "Adds Battle Voice", BRD.JobID)]
+    BRD_Adv_Buffs_Battlevoice = 3050,
+
+    [ParentCombo(BRD_Adv_Buffs)]
+        [CustomComboInfo("Radiant Finale Option", "Adds Radiant Finale", BRD.JobID)]
+    BRD_Adv_Buffs_RadiantFinale = 3051,
+
+    [ParentCombo(BRD_Adv_Buffs)]
+    [CustomComboInfo("Barrage Option", "Adds Barrage", BRD.JobID)]
+    BRD_Adv_Buffs_Barrage = 3052,
 
     [ParentCombo(BRD_ST_AdvMode)]
     [CustomComboInfo("Resonant Option", "Adds Resonant Arrow to the Rotation after Barrage.", BRD.JobID)]
@@ -821,8 +837,24 @@ public enum CustomComboPreset
     BRD_AoE_Adv_Songs = 3016,
 
     [ParentCombo(BRD_AoE_AdvMode)]
-    [CustomComboInfo("AoE Buffs Option", "Adds buffs onto the Advance AoE Bard feature.", BRD.JobID)]
+    [CustomComboInfo("AoE Buffs Option", "Adds buffs onto the Advance AoE Bard feature.\nBuffs have specific timing with each other intended to follow balance. \nDisabling only one can lead to unwanted results", BRD.JobID)]
     BRD_AoE_Adv_Buffs = 3032,
+
+    [ParentCombo(BRD_AoE_Adv_Buffs)]
+    [CustomComboInfo("Raging Strikes Option", "Adds Raging Strikes", BRD.JobID)]
+    BRD_AoE_Adv_Buffs_Raging = 3053,
+
+    [ParentCombo(BRD_AoE_Adv_Buffs)]
+    [CustomComboInfo("Battlevoice Option", "Adds Battle Voice", BRD.JobID)]
+    BRD_AoE_Adv_Buffs_Battlevoice = 3054,
+
+    [ParentCombo(BRD_AoE_Adv_Buffs)]
+    [CustomComboInfo("Radiant Finale Option", "Adds Radiant Finale", BRD.JobID)]
+    BRD_AoE_Adv_Buffs_RadiantFinale = 3055,
+
+    [ParentCombo(BRD_AoE_Adv_Buffs)]
+    [CustomComboInfo("Barrage Option", "Adds Barrage", BRD.JobID)]
+    BRD_AoE_Adv_Buffs_Barrage = 3056,
 
     [ParentCombo(BRD_AoE_AdvMode)]
     [CustomComboInfo("oGcd Option",
@@ -1341,14 +1373,14 @@ public enum CustomComboPreset
 
     // StandardStep(or Finishing Move) --> Last Dance
     [ReplaceSkill(DNC.StandardStep, DNC.FinishingMove)]
-    [ConflictingCombos(DNC_DanceStepCombo, DNC_TechnicalStep_Devilment)]
+    [ConflictingCombos(DNC_DanceStepCombo)]
     [CustomComboInfo("Standard Step to Last Dance Feature",
         "Change Standard Step or Finishing Move to Last Dance when available.", DNC.JobID)]
     DNC_StandardStep_LastDance = 4155,
 
     // Technical Step --> Devilment
     [ReplaceSkill(DNC.StandardStep, DNC.FinishingMove)]
-    [ConflictingCombos(DNC_StandardStep_LastDance, DNC_DanceStepCombo)]
+    [ConflictingCombos(DNC_DanceStepCombo)]
     [CustomComboInfo("Technical Step to Devilment Feature", "Change Technical Step to Devilment as soon as possible.",
         DNC.JobID)]
     DNC_TechnicalStep_Devilment = 4160,
@@ -2138,7 +2170,7 @@ public enum CustomComboPreset
     GNB_ST_Advanced = 7003,
 
     [ParentCombo(GNB_ST_Advanced)]
-    [CustomComboInfo("Balance Opener (Level 100)", "Adds the Balance opener at level 100. Switches between 2 different openers depending on skillspeed.", GNB.JobID)]
+    [CustomComboInfo("Balance Openers", "Add openers into the rotation based on Skill Speed and current Level, starting at Lv90.", GNB.JobID)]
     GNB_ST_Advanced_Opener = 7006,
 
     [ParentCombo(GNB_ST_Advanced)]
@@ -2199,6 +2231,10 @@ public enum CustomComboPreset
         "Adds Burst Strike into the rotation if you have max cartridges & your last combo action was Brutal Shell.",
         GNB.JobID)]
     GNB_ST_Overcap = 7018,
+
+    [ParentCombo(GNB_ST_Advanced)]
+    [CustomComboInfo("Scuffed Option", "Adds Solid Barrel into the rotation under scuffed conditions:\n- Level 90 or above\n- No Mercy is active\n- Only 1 cartridge available\n- Last combo action was Brutal Shell\n- Gnashing Fang combo is still not active", GNB.JobID)]
+    GNB_ST_Scuffed = 7372,
 
     [ParentCombo(GNB_ST_Advanced)]
     [CustomComboInfo("Lightning Shot Uptime Option", "Adds Lightning Shot to the main combo when you are out of range.",
@@ -2449,6 +2485,10 @@ public enum CustomComboPreset
     [ParentCombo(GNB_GF_Features)]
     [CustomComboInfo("Burst Strike Option", "Adds Burst Strike on Gnashing Fang under No Mercy when appropriate.", GNB.JobID)]
     GNB_GF_BurstStrike = 7309,
+
+    [ParentCombo(GNB_GF_Features)]
+    [CustomComboInfo("Scuffed Option", "Adds Solid Barrel to Gnashing Fang under scuffed conditions:\n- Level 90 or above\n- No Mercy is active\n- Only 1 cartridge available\n- Last combo action was Brutal Shell\n- Gnashing Fang combo is still not active", GNB.JobID)]
+    GNB_GF_Scuffed = 7371,
     #endregion
 
     #region No Mercy
@@ -3138,6 +3178,7 @@ public enum CustomComboPreset
     #endregion
 
     [ReplaceSkill(MNK.PerfectBalance)]
+    [ConflictingCombos(MNK_PerfectBalanceProtection)]
     [CustomComboInfo("Perfect Balance Feature", "Perfect Balance becomes Masterful Blitz while you have 3 Beast Chakra.", MNK.JobID)]
     MNK_PerfectBalance = 9023,
 
@@ -3149,7 +3190,12 @@ public enum CustomComboPreset
     [CustomComboInfo("Riddle of Fire/Brotherhood Feature", "Replaces Brotherhood with Riddle of Fire when Brotherhood is on cooldown.", MNK.JobID)]
     MNK_Brotherhood_Riddle = 9041,
 
-    // Last value = 9041
+    [ReplaceSkill(MNK.PerfectBalance)]
+    [ConflictingCombos(MNK_PerfectBalance)]
+    [CustomComboInfo("Perfect Balance Protection", "Replaces Perfect Balance with Savage Blade when you already have Perfect Balance active.", MNK.JobID)]
+    MNK_PerfectBalanceProtection = 9042,
+
+    // Last value = 9042
 
     #endregion
 
@@ -4532,7 +4578,7 @@ public enum CustomComboPreset
 
     #region QoL
 
-    [ReplaceSkill(All.Swiftcast)]
+    [ReplaceSkill(MagicRole.Swiftcast)]
     [ConflictingCombos(ALL_Caster_Raise)]
     [CustomComboInfo("Verraise Feature",
         "Changes Swiftcast to Verraise when under the effect of Swiftcast or Dualcast.", RDM.JobID)]
@@ -4830,7 +4876,7 @@ public enum CustomComboPreset
 
     #region Utility
 
-    [ReplaceSkill(All.Swiftcast)]
+    [ReplaceSkill(MagicRole.Swiftcast)]
     [ConflictingCombos(ALL_Healer_Raise)]
     [CustomComboInfo("Swiftcast Raise Feature", "Changes Swiftcast to Egeiro while Swiftcast is on cooldown.",
         SGE.JobID)]
@@ -5405,7 +5451,7 @@ public enum CustomComboPreset
     [CustomComboInfo("Dissipation Option", "If Aetherflow is on cooldown, show Dissipation instead.", SCH.JobID)]
     SCH_Aetherflow_Dissipation = 16031,
 
-    [ReplaceSkill(All.Swiftcast)]
+    [ReplaceSkill(MagicRole.Swiftcast)]
     [ConflictingCombos(ALL_Healer_Raise)]
     [CustomComboInfo("Swiftcast Raise Combo Feature",
         "Changes Swiftcast to Resurrection while Swiftcast is on cooldown.", SCH.JobID)]
@@ -5480,7 +5526,7 @@ public enum CustomComboPreset
     SMN_ST_Advanced_Combo_Balance_Opener = 170001,
 
     [ParentCombo(SMN_ST_Advanced_Combo)]
-    [CustomComboInfo("Use Ruin III instead of Emerald Ruin III when standing still",
+    [CustomComboInfo("Use Ruin III instead of Emerald Ruin III when standing still between the levels of 54 and 72",
         "Replaces Emerald Ruin III with Ruin III in the rotation when standing still and Ruin Mastery III is not active.",
         SMN.JobID)]
     SMN_ST_Ruin3_Emerald_Ruin3 = 17067,
@@ -5491,11 +5537,11 @@ public enum CustomComboPreset
 
     [ParentCombo(SMN_ST_Advanced_Combo_DemiSummons_Attacks)]
     [CustomComboInfo("Rekindle Combo Option", "Adds Rekindle to the single target combo.", SMN.JobID)]
-    SMN_Advanced_Combo_DemiSummons_Rekindle = 17028,
+    SMN_ST_Advanced_Combo_DemiSummons_Rekindle = 17028,
 
     [ParentCombo(SMN_ST_Advanced_Combo_DemiSummons_Attacks)]
     [CustomComboInfo("Lux Solaris Combo Option", "Adds Lux Solaris to the single target combo.", SMN.JobID)]
-    SMN_Advanced_Combo_DemiSummons_LuxSolaris = 17029,
+    SMN_ST_Advanced_Combo_DemiSummons_LuxSolaris = 17029,
 
     [ParentCombo(SMN_ST_Advanced_Combo)]
     [CustomComboInfo("Egi Attacks Combo Option", "Adds Gemshine to the single target combo.", SMN.JobID)]
@@ -5562,6 +5608,10 @@ public enum CustomComboPreset
     SMN.JobID)]
     SMN_ST_Advanced_Combo_DemiEgiMenu_EgiOrder = 17016,
 
+    [ParentCombo(SMN_ST_Advanced_Combo)]
+    [CustomComboInfo("Radiant Aegis Option", "Will use Radiant Aegis, 30 second self shield, when at 2 charges to prevent waste ", SMN.JobID)]
+    SMN_ST_Advanced_Combo_Radiant = 17071,
+
     #endregion
 
     #region Advanced AoE
@@ -5610,12 +5660,6 @@ SMN.JobID)]
     [CustomComboInfo("Rekindle Combo Option", "Adds Rekindle to the AoE combo.", SMN.JobID)]
     SMN_AoE_Advanced_Combo_DemiSummons_Rekindle = 17056,
 
-    [ParentCombo(SMN_AoE_Advanced_Combo_DemiEgiMenu_oGCDPooling)]
-    [CustomComboInfo("Any Searing Burst Option",
-        "Checks for any Searing light for bursting rather than just your own.\nUse this option if partied with multiple SMN and are worried about your Searing being overwritten.",
-        SMN.JobID)]
-    SMN_AoE_Advanced_Burst_Any_Option = 17057,
-
     [ParentCombo(SMN_AoE_Advanced_Combo_SearingLight)]
     [CustomComboInfo("Searing Flash Combo Option", "Adds Searing Flash to the AoE combo.", SMN.JobID)]
     SMN_AoE_Advanced_Combo_SearingFlash = 17058,
@@ -5656,11 +5700,15 @@ SMN.JobID)]
     [ParentCombo(SMN_AoE_Advanced_Combo)]
     [CustomComboInfo("Add Egi Astralflow", "Choose which Egi Astralflows to add to the rotation.", SMN.JobID)]
     SMN_AoE_Advanced_Combo_Egi_AstralFlow = 17068,
+
+    [ParentCombo(SMN_AoE_Advanced_Combo)]
+    [CustomComboInfo("Radiant Aegis Option", "Will use Radiant Aegis, 30 second self shield, when at 2 charges to prevent waste ", SMN.JobID)]
+    SMN_AoE_Advanced_Combo_Radiant = 17070,
     #endregion
 
     #region Standalone Features
     [ReplaceSkill(SMN.Fester)]
-    [CustomComboInfo("Energy Drain to Fester Feature", "Change Fester into Energy Drain when out of Aetherflow stacks.",
+    [CustomComboInfo("Fester to Energy Drain Feature", "Change Fester into Energy Drain when out of Aetherflow stacks.",
         SMN.JobID)]
     SMN_EDFester = 17008,
 
@@ -5671,7 +5719,7 @@ SMN.JobID)]
     SMN_EDFester_Ruin4 = 17013,
 
     [ReplaceSkill(SMN.Painflare)]
-    [CustomComboInfo("Energy Siphon to Painflare Feature",
+    [CustomComboInfo("Painflare to Energy Siphon Feature",
         "Change Painflare into Energy Siphon when out of Aetherflow stacks.", SMN.JobID)]
     SMN_ESPainflare = 17009,
 
@@ -5702,6 +5750,12 @@ SMN.JobID)]
         "Changes Painflare to Ruin IV when out of Aetherflow stacks, Energy Siphon is on cooldown, and Ruin IV is up.",
         SMN.JobID)]
     SMN_ESPainflare_Ruin4 = 17039,
+
+    [CustomComboInfo("Searing Light Waste Protection Feature",
+           "Changes Searing light to SavageBlade while under the affect of another summoners buff to prevent waste.", SMN.JobID)]
+    SMN_Searing = 17072,
+
+
 
     #endregion
 
@@ -6468,7 +6522,7 @@ SMN.JobID)]
     [CustomComboInfo("Cure II Sync Feature", "Changes Cure II to Cure when synced below Lv.30.", WHM.JobID)]
     WHM_CureSync = 19002,
 
-    [ReplaceSkill(All.Swiftcast)]
+    [ReplaceSkill(MagicRole.Swiftcast)]
     [ConflictingCombos(ALL_Healer_Raise)]
     [CustomComboInfo("Alternative Raise Feature", "Changes Swiftcast to Raise.", WHM.JobID)]
     WHM_Raise = 19004,

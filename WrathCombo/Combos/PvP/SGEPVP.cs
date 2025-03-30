@@ -4,6 +4,8 @@ namespace WrathCombo.Combos.PvP
 {
     internal static class SGEPvP
     {
+        internal class Role : PvPHealer;
+
         internal const uint
             Dosis = 29256,
             Phlegma = 29259,

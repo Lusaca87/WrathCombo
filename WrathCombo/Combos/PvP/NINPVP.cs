@@ -7,6 +7,8 @@ namespace WrathCombo.Combos.PvP
         public const byte ClassID = 29;
         public const byte JobID = 30;
 
+        internal class Role : PvPMelee;
+
         internal const uint
             SpinningEdge = 29500,
             GustSlash = 29501,

@@ -6,6 +6,8 @@ namespace WrathCombo.Combos.PvP
     {
         public const byte JobID = 28;
 
+        internal class Role : PvPHealer;
+
         public const uint
             Broil = 29231,
             Aqloquilum = 29232,

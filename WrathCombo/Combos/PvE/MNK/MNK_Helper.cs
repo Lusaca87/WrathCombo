@@ -15,17 +15,17 @@ internal partial class MNK
 
     internal static float GCD => GetCooldown(OriginalHook(Bootshine)).CooldownTotal;
 
-    internal static bool BothNadisOpen => Gauge.Nadi.ToString() == "LUNAR, SOLAR";
+    internal static bool BothNadisOpen => Gauge.Nadi.ToString() == "Lunar, Solar";
 
-    internal static bool SolarNadi => Gauge.Nadi == Nadi.SOLAR;
+    internal static bool SolarNadi => Gauge.Nadi == Nadi.Solar;
 
-    internal static bool LunarNadi => Gauge.Nadi == Nadi.LUNAR;
+    internal static bool LunarNadi => Gauge.Nadi == Nadi.Lunar;
 
-    internal static int OpoOpoChakra => Gauge.BeastChakra.Count(x => x == BeastChakra.OPOOPO);
+    internal static int OpoOpoChakra => Gauge.BeastChakra.Count(x => x == BeastChakra.OpoOpo);
 
-    internal static int RaptorChakra => Gauge.BeastChakra.Count(x => x == BeastChakra.RAPTOR);
+    internal static int RaptorChakra => Gauge.BeastChakra.Count(x => x == BeastChakra.Raptor);
 
-    internal static int CoeurlChakra => Gauge.BeastChakra.Count(x => x == BeastChakra.COEURL);
+    internal static int CoeurlChakra => Gauge.BeastChakra.Count(x => x == BeastChakra.Coeurl);
 
     internal static uint DetermineCoreAbility(uint actionId, bool useTrueNorthIfEnabled)
     {
@@ -95,68 +95,23 @@ internal partial class MNK
         return false;
     }
 
-    #region ID's
-
-    public const byte ClassID = 2;
-    public const byte JobID = 20;
-
-    public const uint
-        Bootshine = 53,
-        TrueStrike = 54,
-        SnapPunch = 56,
-        SteeledMeditation = 36940,
-        SteelPeak = 25761,
-        TwinSnakes = 61,
-        ArmOfTheDestroyer = 62,
-        Demolish = 66,
-        Mantra = 65,
-        DragonKick = 74,
-        Rockbreaker = 70,
-        Thunderclap = 25762,
-        HowlingFist = 25763,
-        FourPointFury = 16473,
-        PerfectBalance = 69,
-        FormShift = 4262,
-        TheForbiddenChakra = 3547,
-        MasterfulBlitz = 25764,
-        RiddleOfEarth = 7394,
-        EarthsReply = 36944,
-        RiddleOfFire = 7395,
-        Brotherhood = 7396,
-        RiddleOfWind = 25766,
-        InspiritedMeditation = 36941,
-        EnlightenedMeditation = 36943,
-        Enlightenment = 16474,
-        SixSidedStar = 16476,
-        ShadowOfTheDestroyer = 25767,
-        RisingPhoenix = 25768,
-        WindsReply = 36949,
-        ForbiddenMeditation = 36942,
-        LeapingOpo = 36945,
-        RisingRaptor = 36946,
-        PouncingCoeurl = 36947,
-        TrueNorth = 7546,
-        ElixirBurst = 36948,
-        FiresReply = 36950;
-
-    internal static class Buffs
+    internal static bool InMasterfulRange()
     {
-        public const ushort
-            TwinSnakes = 101,
-            OpoOpoForm = 107,
-            RaptorForm = 108,
-            CoeurlForm = 109,
-            PerfectBalance = 110,
-            RiddleOfFire = 1181,
-            RiddleOfWind = 2687,
-            FormlessFist = 2513,
-            TrueNorth = 1250,
-            WindsRumination = 3842,
-            FiresRumination = 3843,
-            Brotherhood = 1185;
-    }
+        if (NumberOfEnemiesInRange(ElixirField, null) >= 1 &&
+            (OriginalHook(MasterfulBlitz) == ElixirField || 
+             OriginalHook(MasterfulBlitz) == FlintStrike ||
+             OriginalHook(MasterfulBlitz) == ElixirBurst || 
+             OriginalHook(MasterfulBlitz) == RisingPhoenix))
+            return true;
 
-    #endregion
+        if (NumberOfEnemiesInRange(TornadoKick, CurrentTarget) >= 1 &&
+            (OriginalHook(MasterfulBlitz) == TornadoKick ||
+             OriginalHook(MasterfulBlitz) == CelestialRevolution ||
+             OriginalHook(MasterfulBlitz) == PhantomRush))
+            return true;
+
+        return false;
+    }
 
     #region Openers
 
@@ -202,31 +157,15 @@ internal partial class MNK
         ];
 
         internal override UserData ContentCheckConfig => Config.MNK_Balance_Content;
-        public override bool HasCooldowns()
-        {
-            if (GetRemainingCharges(PerfectBalance) < 2)
-                return false;
 
-            if (!IsOffCooldown(Brotherhood))
-                return false;
-
-            if (!IsOffCooldown(RiddleOfFire))
-                return false;
-
-            if (!IsOffCooldown(RiddleOfWind))
-                return false;
-
-            if (Gauge.Nadi != Nadi.NONE)
-                return false;
-
-            if (Gauge.RaptorFury != 0)
-                return false;
-
-            if (Gauge.CoeurlFury != 0)
-                return false;
-
-            return true;
-        }
+        public override bool HasCooldowns() => 
+            GetRemainingCharges(PerfectBalance) is 2 && 
+            IsOffCooldown(Brotherhood) &&
+            IsOffCooldown(RiddleOfFire) && 
+            IsOffCooldown(RiddleOfWind) &&
+            Gauge.Nadi is Nadi.None && 
+            Gauge.RaptorFury is 0 && 
+            Gauge.CoeurlFury is 0;
     }
 
     internal class MNKOpenerLogicLL : WrathOpener
@@ -258,33 +197,91 @@ internal partial class MNK
             ElixirBurst,
             LeapingOpo
         ];
+
         internal override UserData ContentCheckConfig => Config.MNK_Balance_Content;
 
-        public override bool HasCooldowns()
-        {
-            if (GetRemainingCharges(PerfectBalance) < 2)
-                return false;
+        public override bool HasCooldowns() =>
+            GetRemainingCharges(PerfectBalance) is 2 &&
+            IsOffCooldown(Brotherhood) &&
+            IsOffCooldown(RiddleOfFire) &&
+            IsOffCooldown(RiddleOfWind) &&
+            Gauge.Nadi is Nadi.None &&
+            Gauge.RaptorFury is 0 && 
+            Gauge.CoeurlFury is 0;
+    }
 
-            if (!IsOffCooldown(Brotherhood))
-                return false;
+    #endregion
 
-            if (!IsOffCooldown(RiddleOfFire))
-                return false;
+    #region ID's
 
-            if (!IsOffCooldown(RiddleOfWind))
-                return false;
+    public const byte ClassID = 2;
+    public const byte JobID = 20;
 
-            if (Gauge.Nadi != Nadi.NONE)
-                return false;
+    public const uint
+        Bootshine = 53,
+        TrueStrike = 54,
+        SnapPunch = 56,
+        TwinSnakes = 61,
+        ArmOfTheDestroyer = 62,
+        Demolish = 66,
+        DragonKick = 74,
+        Rockbreaker = 70,
+        Thunderclap = 25762,
+        HowlingFist = 25763,
+        FourPointFury = 16473,
+        FormShift = 4262,
+        SixSidedStar = 16476,
+        ShadowOfTheDestroyer = 25767,
+        LeapingOpo = 36945,
+        RisingRaptor = 36946,
+        PouncingCoeurl = 36947,
+        TrueNorth = 7546,
 
-            if (Gauge.RaptorFury != 0)
-                return false;
+        //Blitzes
+        PerfectBalance = 69,
+        MasterfulBlitz = 25764,
+        ElixirField = 3545,
+        ElixirBurst = 36948,
+        FlintStrike = 25882,
+        RisingPhoenix = 25768,
+        CelestialRevolution = 25765,
+        TornadoKick = 3543,
+        PhantomRush = 25769,
 
-            if (Gauge.CoeurlFury != 0)
-                return false;
+        //Riddles + Buffs
+        RiddleOfEarth = 7394,
+        EarthsReply = 36944,
+        RiddleOfFire = 7395,
+        FiresReply = 36950,
+        RiddleOfWind = 25766,
+        WindsReply = 36949,
+        Brotherhood = 7396,
+        Mantra = 65,
 
-            return true;
-        }
+        //Meditations
+        InspiritedMeditation = 36941,
+        SteeledMeditation = 36940,
+        EnlightenedMeditation = 36943,
+        ForbiddenMeditation = 36942,
+        TheForbiddenChakra = 3547,
+        Enlightenment = 16474,
+        SteelPeak = 25761;
+
+    internal static class Buffs
+    {
+        public const ushort
+            TwinSnakes = 101,
+            OpoOpoForm = 107,
+            RaptorForm = 108,
+            CoeurlForm = 109,
+            PerfectBalance = 110,
+            RiddleOfFire = 1181,
+            RiddleOfWind = 2687,
+            FormlessFist = 2513,
+            TrueNorth = 1250,
+            WindsRumination = 3842,
+            FiresRumination = 3843,
+            Brotherhood = 1185;
     }
 
     #endregion

@@ -8,6 +8,8 @@ namespace WrathCombo.Combos.PvP
     {
         public const byte JobID = 39;
 
+        internal class Role : PvPMelee;
+
         internal const uint
             Slice = 29538,
             WaxingSlice = 29539,

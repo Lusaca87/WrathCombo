@@ -7,6 +7,8 @@ namespace WrathCombo.Combos.PvP
     {
         public const byte JobID = 42;
 
+        internal class Role : PvPCaster;
+
         internal const uint
             FireInRed = 39191,
             AeroInGreen = 39192,

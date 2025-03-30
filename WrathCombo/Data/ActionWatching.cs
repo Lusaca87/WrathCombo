@@ -43,6 +43,7 @@ namespace WrathCombo.Data
         internal static readonly Dictionary<uint, long> ChargeTimestamps = [];
         internal static readonly Dictionary<uint, long> ActionTimestamps = [];
         internal static readonly Dictionary<uint, long> LastSuccessfulUseTime = [];
+        internal static readonly Dictionary<(uint, ulong), long> UsedOnDict = [];
 
         internal readonly static List<uint> CombatActions = [];
 
@@ -102,6 +103,15 @@ namespace WrathCombo.Data
                                 Svc.Framework.RunOnTick(() => member.MPUpdatePending = false, TimeSpan.FromSeconds(1.5));
                             }
                         }
+                        if (eff.Type is ActionEffectType.ApplyStatusEffectSource)
+                        {
+                            if (GetPartyMembers().Any(x => x.GameObjectId == casterEntityId))
+                            {
+                                var member = GetPartyMembers().First(x => x.GameObjectId == (eff.AtSource ? casterEntityId : target.id));
+                                member.BuffsGainedAt[eff.Value] = Environment.TickCount64;
+                            }
+                        }
+
                     }
                 }
 
@@ -174,6 +184,7 @@ namespace WrathCombo.Data
                 ActionType = actionType;
                 WrathOpener.CurrentOpener?.ProgressOpener(actionId);
                 UpdateHelpers(actionId);
+                UsedOnDict[(actionId, targetObjectId)] = Environment.TickCount64;
                 SendActionHook!.Original(targetObjectId, actionType, actionId, sequence, a5, a6, a7, a8, a9);
 
                 Svc.Log.Verbose($"{actionId} {sequence} {a5} {a6} {a7} {a8} {a9}");
@@ -184,9 +195,6 @@ namespace WrathCombo.Data
                 SendActionHook!.Original(targetObjectId, actionType, actionId, sequence, a5, a6, a7, a8, a9);
             }
         }
-
-        public unsafe delegate bool CanQueueActionDelegate(ActionManager* actionManager, uint actionType, uint actionID);
-        public static readonly Hook<CanQueueActionDelegate> canQueueAction;
 
         private static void UpdateHelpers(uint actionId)
         {
@@ -337,7 +345,6 @@ namespace WrathCombo.Data
             Disable();
             ReceiveActionEffectHook?.Dispose();
             SendActionHook?.Dispose();
-            canQueueAction?.Dispose();
             UseActionHook?.Dispose();
         }
 
@@ -346,7 +353,6 @@ namespace WrathCombo.Data
             ReceiveActionEffectHook ??= Svc.Hook.HookFromAddress<ReceiveActionEffectDelegate>(Addresses.Receive.Value, ReceiveActionEffectDetour);
             SendActionHook ??= Svc.Hook.HookFromSignature<SendActionDelegate>("48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 48 8B E9 41 0F B7 D9", SendActionDetour);
             UseActionHook ??= Svc.Hook.HookFromAddress<UseActionDelegate>(ActionManager.Addresses.UseAction.Value, UseActionDetour);
-            canQueueAction ??= Svc.Hook.HookFromSignature<CanQueueActionDelegate>("E8 ?? ?? ?? ?? 84 C0 74 37 8B 84 24 ?? ?? 00 00", CanQueueDetour);
         }
 
         private unsafe static bool UseActionDetour(ActionManager* actionManager, ActionType actionType, uint actionId, ulong targetId, uint extraParam, ActionManager.UseActionMode mode, uint comboRouteId, bool* outOptAreaTargeted)
@@ -364,11 +370,6 @@ namespace WrathCombo.Data
                 }
             }
             return UseActionHook.Original(actionManager, actionType, actionId, targetId, extraParam, mode, comboRouteId, outOptAreaTargeted);
-        }
-
-        private static unsafe bool CanQueueDetour(ActionManager* actionManager, uint actionType, uint actionID)
-        {
-            return canQueueAction.Original(actionManager, actionType, actionID);
         }
 
         public static void Enable()
@@ -389,6 +390,7 @@ namespace WrathCombo.Data
                 LastAction = 0;
                 LastWeaponskill = 0;
                 LastSpell = 0;
+                UsedOnDict.Clear();
             }
         }
 
@@ -396,7 +398,6 @@ namespace WrathCombo.Data
         {
             ReceiveActionEffectHook.Disable();
             SendActionHook?.Disable();
-            canQueueAction?.Disable();
             UseActionHook?.Disable();
             Svc.Condition.ConditionChange -= ResetActions;
         }

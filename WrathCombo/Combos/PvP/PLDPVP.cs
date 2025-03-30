@@ -6,6 +6,8 @@ namespace WrathCombo.Combos.PvP
     {
         public const byte JobID = 19;
 
+        internal class Role : PvPTank;
+
         public const uint
             FastBlade = 29058,
             RiotBlade = 29059,

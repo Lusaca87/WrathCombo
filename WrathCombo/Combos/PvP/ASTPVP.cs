@@ -7,6 +7,8 @@ namespace WrathCombo.Combos.PvP
     internal static class ASTPvP
     {
         internal const byte JobID = 33;
+        
+        internal class Role : PvPHealer;
 
         internal const uint
             Malefic = 29242,

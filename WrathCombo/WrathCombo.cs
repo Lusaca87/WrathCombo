@@ -19,7 +19,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using ECommons.Logging;
-using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using WrathCombo.Attributes;
 using WrathCombo.AutoRotation;
@@ -115,6 +114,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
                 Service.ActionReplacer.UpdateFilteredCombos();
                 WrathOpener.SelectOpener();
                 P.IPCSearch.UpdateActiveJobPresets();
+                P.IPC.Leasing.SuspendLeases(CancellationReason.JobChanged);
             }
 
             if (onTerritoryChange)
@@ -156,7 +156,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
         Service.ActionReplacer = new ActionReplacer();
         ActionWatching.Enable();
         AST.InitCheckCards();
-        IPC = Provider.InitAsync().Result;
+        IPC = Provider.Init();
 
         ConfigWindow = new ConfigWindow();
         SettingChangeWindow = new SettingChangeWindow();
@@ -237,8 +237,32 @@ public sealed partial class WrathCombo : IDalamudPlugin
     {
         UpdateCaches(false, true, false);
 
-        if (P.UIHelper.AutoRotationStateControlled() is not null)
-            OnIPCControlledTerritoryChange();
+        Task.Run(() =>
+        {
+            PluginLog.Verbose($"OnIPCInstanceChange: Waiting for screen to be ready ...");
+
+            // Wait (a limited amount of time) for the screen to be ready
+            byte count = 0;
+            while (!ECommons.GenericHelpers.IsScreenReady())
+            {
+                if (count > 50) return;
+                count++;
+                Task.Delay(400).Wait();
+            }
+
+            // Wait for AutoDuty to setup
+            PluginLog.Verbose($"OnIPCInstanceChange: Waiting for any IPC to seize control ...");
+            Task.Delay(4000).Wait();
+
+            // If IPC-Controlled: Run the IPC-Controlled Territory Change
+            if (P.UIHelper.AutoRotationStateControlled() is not null)
+            {
+                PluginLog.Verbose($"OnIPCInstanceChange: Is IPC-Controlled");
+                OnIPCControlledTerritoryChange();
+            }
+            else
+                PluginLog.Verbose($"OnIPCInstanceChange: Not IPC-Controlled");
+        });
     }
 
     public const string OptionControlledByIPC =
@@ -266,10 +290,13 @@ public sealed partial class WrathCombo : IDalamudPlugin
 
     private unsafe void OnIPCControlledTerritoryChange(int callNumber = 0)
     {
-        TM.DelayNext(callNumber < 1 ? 6000 : 1400);
+        // Wait between loops
+        TM.DelayNext(1400);
 
+        // Try to use stance or dance partner
         TM.Enqueue(() =>
         {
+            // Whether we'll loop again, passed to Cast below
             var callAgainToConfirm = false;
 
             #region Tank Stance
@@ -295,14 +322,19 @@ public sealed partial class WrathCombo : IDalamudPlugin
 
             #endregion
 
+            // Give up trying after 10 calls
             if (callNumber > 10)
                 return;
+
+            // Loop again to re-check
             if (callAgainToConfirm)
                 OnIPCControlledTerritoryChange(callNumber + 1);
         }, "OnIPCControlledTerritoryChange");
 
         return;
 
+        // Method to try to use the ability requested, and check if the buff from it
+        // appeared. If it didn't, it will try again.
         void Cast
             (byte job, uint action, ushort buff, ulong? target, ref bool
                 callAgain)
@@ -438,7 +470,6 @@ public sealed partial class WrathCombo : IDalamudPlugin
     public void Dispose()
     {
         ConfigWindow.Dispose();
-
         // Try to force a config save if there are some pending
         if (PluginConfiguration.SaveQueue.Count > 0)
             lock (PluginConfiguration.SaveQueue)
@@ -456,7 +487,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
         Svc.ClientState.TerritoryChanged -= ClientState_TerritoryChanged;
         Svc.PluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
         Svc.PluginInterface.UiBuilder.Draw -= DrawUI;
-
+        
         Service.ActionReplacer.Dispose();
         Service.ComboCache.Dispose();
         ActionWatching.Dispose();

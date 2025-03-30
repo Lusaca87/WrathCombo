@@ -7,6 +7,8 @@ namespace WrathCombo.Combos.PvP
     {
         public const byte JobID = 41;
 
+        internal class Role : PvPMelee;
+
         internal const uint
             SteelFangs = 39157,
             HuntersSting = 39159,

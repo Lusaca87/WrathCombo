@@ -1,4 +1,5 @@
 using ECommons.ExcelServices;
+using ImGuiNET;
 using WrathCombo.Combos.PvP;
 using WrathCombo.CustomComboNS.Functions;
 using WrathCombo.Extensions;
@@ -16,6 +17,7 @@ internal partial class SMN
             SMN_ST_PrimalChoice = new("SMN_PrimalChoice", 1),
             SMN_ST_SwiftcastPhase = new("SMN_SwiftcastPhase", 1),
             SMN_ST_Burst_Delay = new("SMN_Burst_Delay", 0),
+            SMN_Opener_SkipSwiftcast = new("SMN_Opener_SkipSwiftcast", 1),
 
             SMN_AoE_Lucid = new("SMN_AoE_Lucid", 8000),
             SMN_AoE_BurstPhase = new("SMN_AoE_BurstPhase", 1),
@@ -41,7 +43,16 @@ internal partial class SMN
             switch (preset)
             {
                 case CustomComboPreset.SMN_ST_Advanced_Combo_Balance_Opener:
+                    
                     UserConfig.DrawBossOnlyChoice(SMN_Balance_Content);
+
+                    ImGui.NewLine();
+
+                    UserConfig.DrawHorizontalRadioButton(SMN_Opener_SkipSwiftcast, "Use Swiftcast",
+                        "Will use Swiftcast in opener to try and snapshot in pots for lower gcds", 1);
+
+                    UserConfig.DrawHorizontalRadioButton(SMN_Opener_SkipSwiftcast, "Skip Swiftcast",
+                        "Will not use swiftcast in opener for higher gcds", 2);
                     break;
 
                 case CustomComboPreset.SMN_ST_Advanced_Combo_DemiEgiMenu_EgiOrder:
@@ -63,9 +74,9 @@ internal partial class SMN
                     break;
 
                 case CustomComboPreset.SMN_ST_Advanced_Combo_DemiEgiMenu_oGCDPooling:
-                    UserConfig.DrawHorizontalRadioButton(SMN_ST_BurstPhase, "Solar Bahamut/Bahamut",
-                        "Bursts during Bahamut phase.\nBahamut burst phase becomes Solar Bahamut at Lv100.", 1);
-                    UserConfig.DrawHorizontalRadioButton(SMN_ST_BurstPhase, "Phoenix", "Bursts during Phoenix phase.", 2);
+                    UserConfig.DrawHorizontalRadioButton(SMN_ST_BurstPhase, "Solar Bahamut/Pre 100 Bahamut",
+                        "Bursts during Bahamut phase before 100.\nBahamut burst phase becomes Solar Bahamut at Lv100.", 1);
+                    UserConfig.DrawHorizontalRadioButton(SMN_ST_BurstPhase, "Phoenix/Post 100 Bahamut", "Bursts during Phoenix phase. Also adds Regular Bahamut at 100. ", 2);
 
                     UserConfig.DrawHorizontalRadioButton(SMN_ST_BurstPhase, "Any Demi Phase",
                         "Bursts during any Demi Summon phase.", 3);
@@ -79,9 +90,9 @@ internal partial class SMN
                     break;
 
                 case CustomComboPreset.SMN_AoE_Advanced_Combo_DemiEgiMenu_oGCDPooling:
-                    UserConfig.DrawHorizontalRadioButton(SMN_AoE_BurstPhase, "Solar Bahamut/Bahamut",
-                        "Bursts during Bahamut phase.\nBahamut burst phase becomes Solar Bahamut at Lv100.", 1);
-                    UserConfig.DrawHorizontalRadioButton(SMN_AoE_BurstPhase, "Phoenix", "Bursts during Phoenix phase.", 2);
+                    UserConfig.DrawHorizontalRadioButton(SMN_AoE_BurstPhase, "Solar Bahamut/Pre 100 Bahamut",
+                        "Bursts during Bahamut phase below 100.\nBahamut burst phase becomes Solar Bahamut at Lv100.", 1);
+                    UserConfig.DrawHorizontalRadioButton(SMN_AoE_BurstPhase, "Phoenix/Post 100 Bahamut", "Bursts during Phoenix phase. Also adds Regular Bahamut at 100.", 2);
 
                     UserConfig.DrawHorizontalRadioButton(SMN_AoE_BurstPhase, "Any Demi Phase",
                         "Bursts during any Demi Summon phase.", 3);
@@ -137,9 +148,10 @@ internal partial class SMN
 
                 case CustomComboPreset.SMN_ST_Advanced_Combo_Egi_AstralFlow:
                     {
-                        UserConfig.DrawHorizontalMultiChoice(SMN_ST_Egi_AstralFlow, "Add Mountain Buster", "", 3, 0);
-                        UserConfig.DrawHorizontalMultiChoice(SMN_ST_Egi_AstralFlow, "Add Crimson Cyclone", "", 3, 1);
-                        UserConfig.DrawHorizontalMultiChoice(SMN_ST_Egi_AstralFlow, "Add Slipstream", "", 3, 2);
+                        UserConfig.DrawHorizontalMultiChoice(SMN_ST_Egi_AstralFlow, "Add Mountain Buster", "", 4, 0);
+                        UserConfig.DrawHorizontalMultiChoice(SMN_ST_Egi_AstralFlow, "Add Crimson Cyclone", "", 4, 1);
+                        UserConfig.DrawHorizontalMultiChoice(SMN_ST_Egi_AstralFlow, "Add Crimson Strike", "", 4, 3);
+                        UserConfig.DrawHorizontalMultiChoice(SMN_ST_Egi_AstralFlow, "Add Slipstream", "", 4, 2);
 
                         if (SMN_ST_Egi_AstralFlow[1])
                             UserConfig.DrawAdditionalBoolChoice(SMN_ST_CrimsonCycloneMelee,
@@ -150,9 +162,10 @@ internal partial class SMN
 
                 case CustomComboPreset.SMN_AoE_Advanced_Combo_Egi_AstralFlow:
                     {
-                        UserConfig.DrawHorizontalMultiChoice(SMN_AoE_Egi_AstralFlow, "Add Mountain Buster", "", 3, 0);
-                        UserConfig.DrawHorizontalMultiChoice(SMN_AoE_Egi_AstralFlow, "Add Crimson Cyclone", "", 3, 1);
-                        UserConfig.DrawHorizontalMultiChoice(SMN_AoE_Egi_AstralFlow, "Add Slipstream", "", 3, 2);
+                        UserConfig.DrawHorizontalMultiChoice(SMN_AoE_Egi_AstralFlow, "Add Mountain Buster", "", 4, 0);
+                        UserConfig.DrawHorizontalMultiChoice(SMN_AoE_Egi_AstralFlow, "Add Crimson Cyclone", "", 4, 1);
+                        UserConfig.DrawHorizontalMultiChoice(SMN_AoE_Egi_AstralFlow, "Add Crimson Strike", "", 4, 3);
+                        UserConfig.DrawHorizontalMultiChoice(SMN_AoE_Egi_AstralFlow, "Add Slipstream", "", 4, 2);
 
                         if (SMN_AoE_Egi_AstralFlow[1])
                             UserConfig.DrawAdditionalBoolChoice(SMN_AoE_CrimsonCycloneMelee,
