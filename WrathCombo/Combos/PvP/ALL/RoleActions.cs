@@ -16,9 +16,9 @@ namespace WrathCombo.Combos.PvP
                 Rust = 4480;
         }
 
-        public bool CanComet() => ActionReady(Comet);
-        public bool CanPhantomDart() => ActionReady(PhantomDart);
-        public bool CanRust() => ActionReady(Rust);
+        public static bool CanComet() => ActionReady(Comet);
+        public static bool CanPhantomDart() => ActionReady(PhantomDart);
+        public static bool CanRust() => ActionReady(Rust);
     }
 
     class PvPHealer //Healers
@@ -76,7 +76,7 @@ namespace WrathCombo.Combos.PvP
         public static class Buffs
         {
             public const ushort
-            //    Bloodbath = 1234; // NEED VERIFICATION IT EVEN IS A BUFF, CANNOT FIND
+                Bloodbath = 1982,
                 Swift = 4477;
         }
 
@@ -102,16 +102,16 @@ namespace WrathCombo.Combos.PvP
         public static class Debuffs
         {
             public const ushort
-                Rampage = 4476; 
+                Rampage = 4476;
         }
 
         public static bool CanRampage() =>
-            IsEnabled(Rampage) && ActionReady(Rampage);
+            ActionReady(Rampage);
 
         public static bool CanRampart(int healthPercent) =>
-            IsEnabled(Rampage) && ActionReady(Rampart) && PlayerHealthPercentageHp() < healthPercent;
+            ActionReady(Rampart) && PlayerHealthPercentageHp() <= healthPercent;
 
         public static bool CanFullSwing() =>
-            IsEnabled(FullSwing) && ActionReady(FullSwing);
+            ActionReady(FullSwing);
     }
 }

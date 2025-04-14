@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using WrathCombo.CustomComboNS;
 using WrathCombo.CustomComboNS.Functions;
+using static WrathCombo.CustomComboNS.Functions.CustomComboFunctions;
 using WrathCombo.Data;
 using WrathCombo.Extensions;
 namespace WrathCombo.Combos.PvE;
@@ -27,7 +28,7 @@ internal partial class AST
         };
     public static ASTOpenerMaxLevel1 Opener1 = new();
 
-    public static ASTGauge Gauge => CustomComboFunctions.GetJobGauge<ASTGauge>();
+    public static ASTGauge Gauge => GetJobGauge<ASTGauge>();
     public static CardType DrawnCard { get; set; }
 
     public static int SpellsSinceDraw()
@@ -75,10 +76,10 @@ internal partial class AST
             DrawnCard = Gauge.DrawnCards[0];
         }
 
-        if (CustomComboFunctions.IsEnabled(CustomComboPreset.AST_Cards_QuickTargetCards) &&
+        if (IsEnabled(CustomComboPreset.AST_Cards_QuickTargetCards) &&
             (QuickTargetCards.SelectedRandomMember is null || BetterTargetAvailable()))
         {
-            if (CustomComboFunctions.ActionReady(Play1))
+            if (ActionReady(Play1))
                 QuickTargetCards.Invoke();
         }
 
@@ -90,18 +91,18 @@ internal partial class AST
     {
         if (QuickTargetCards.SelectedRandomMember is null ||
             QuickTargetCards.SelectedRandomMember.IsDead ||
-            CustomComboFunctions.OutOfRange(Balance, QuickTargetCards.SelectedRandomMember))
+            OutOfRange(Balance, QuickTargetCards.SelectedRandomMember))
             return true;
 
         IBattleChara? m = QuickTargetCards.SelectedRandomMember as IBattleChara;
-        if (DrawnCard is CardType.Balance && CustomComboFunctions.JobIDs.Melee.Any(x => x == m.ClassJob.RowId) ||
-            DrawnCard is CardType.Spear && CustomComboFunctions.JobIDs.Ranged.Any(x => x == m.ClassJob.RowId))
+        if (DrawnCard is CardType.Balance && JobIDs.Melee.Any(x => x == m.ClassJob.RowId) ||
+            DrawnCard is CardType.Spear && JobIDs.Ranged.Any(x => x == m.ClassJob.RowId))
             return false;
 
         List<IBattleChara> targets = new();
         for(int i = 1; i <= 8; i++) //Checking all 8 available slots and skipping nulls & DCs
         {
-            if (CustomComboFunctions.GetPartySlot(i) is not IBattleChara member)
+            if (GetPartySlot(i) is not IBattleChara member)
                 continue;
             if (member.GameObjectId == QuickTargetCards.SelectedRandomMember.GameObjectId)
                 continue;
@@ -109,17 +110,15 @@ internal partial class AST
                 continue; //Skip nulls/disconnected people
             if (member.IsDead)
                 continue;
-            if (CustomComboFunctions.OutOfRange(Balance, member))
+            if (OutOfRange(Balance, member))
                 continue;
 
-            if (CustomComboFunctions.FindEffectOnMember(Buffs.BalanceBuff, member) is not null)
-                continue;
-            if (CustomComboFunctions.FindEffectOnMember(Buffs.SpearBuff, member) is not null)
-                continue;
+            if (HasStatusEffect(Buffs.BalanceBuff, member, true)) continue;
+            if (HasStatusEffect(Buffs.SpearBuff, member, true)) continue;
 
-            if (Config.AST_QuickTarget_SkipDamageDown && CustomComboFunctions.TargetHasDamageDown(member))
+            if (Config.AST_QuickTarget_SkipDamageDown && TargetHasDamageDown(member))
                 continue;
-            if (Config.AST_QuickTarget_SkipRezWeakness && CustomComboFunctions.TargetHasRezWeakness(member))
+            if (Config.AST_QuickTarget_SkipRezWeakness && TargetHasRezWeakness(member))
                 continue;
 
             if (member.GetRole() is CombatRole.Healer or CombatRole.Tank)
@@ -130,8 +129,8 @@ internal partial class AST
 
         if (targets.Count == 0)
             return false;
-        if (DrawnCard is CardType.Balance && targets.Any(x => CustomComboFunctions.JobIDs.Melee.Any(y => y == x.ClassJob.RowId)) ||
-            DrawnCard is CardType.Spear && targets.Any(x => CustomComboFunctions.JobIDs.Ranged.Any(y => y == x.ClassJob.RowId)))
+        if (DrawnCard is CardType.Balance && targets.Any(x => JobIDs.Melee.Any(y => y == x.ClassJob.RowId)) ||
+            DrawnCard is CardType.Spear && targets.Any(x => JobIDs.Ranged.Any(y => y == x.ClassJob.RowId)))
         {
             QuickTargetCards.SelectedRandomMember = null;
             return true;
@@ -186,10 +185,8 @@ internal partial class AST
                 if (OutOfRange(Balance, member))
                     continue;
 
-                if (FindEffectOnMember(Buffs.BalanceBuff, member) is not null)
-                    continue;
-                if (FindEffectOnMember(Buffs.SpearBuff, member) is not null)
-                    continue;
+                if (HasStatusEffect(Buffs.BalanceBuff, member, true)) continue;
+                if (HasStatusEffect(Buffs.SpearBuff, member, true)) continue;
 
                 if (Config.AST_QuickTarget_SkipDamageDown && TargetHasDamageDown(member))
                     continue;
@@ -212,9 +209,9 @@ internal partial class AST
                     if (OutOfRange(Balance, member))
                         continue;
 
-                    if (FindEffectOnMember(Buffs.BalanceBuff, member) is not null)
+                    if (HasStatusEffect(Buffs.BalanceBuff, member, true))
                         continue;
-                    if (FindEffectOnMember(Buffs.SpearBuff, member) is not null)
+                    if (HasStatusEffect(Buffs.SpearBuff, member, true))
                         continue;
 
                     PartyTargets.Add(member);
@@ -230,48 +227,57 @@ internal partial class AST
                 }
             }
 
+            //Grok is a scary SOB
             if (PartyTargets.Count > 0)
             {
                 PartyTargets.Shuffle();
-                //Give card to DPS first
-                for(int i = 0; i <= PartyTargets.Count - 1; i++)
+
+                IGameObject? suitableDps = null;
+                IGameObject? unsuitableDps = null;
+                IGameObject? backupTarget = null;
+
+                foreach (IGameObject partyMember in PartyTargets)
                 {
-                    byte job = PartyTargets[i] is IBattleChara ? (byte)(PartyTargets[i] as IBattleChara).ClassJob.RowId : (byte)0;
+                    if (partyMember is null) continue;
+                    byte job = partyMember is IBattleChara chara ? (byte)chara.ClassJob.RowId : (byte)0;
+
+                    // Suitable DPS (highest priority)
                     if (cardDrawn is CardType.Balance && JobIDs.Melee.Contains(job) ||
                         cardDrawn is CardType.Spear && JobIDs.Ranged.Contains(job))
                     {
-                        //TargetObject(PartyTargets[i]);
-                        SelectedRandomMember = PartyTargets[i];
-                        return true;
+                        suitableDps = partyMember;
+                        break; // Found the best option, stop searching
                     }
-                }
-                //Give card to unsuitable DPS next
-                for(int i = 0; i <= PartyTargets.Count - 1; i++)
-                {
-                    byte job = PartyTargets[i] is IBattleChara ? (byte)(PartyTargets[i] as IBattleChara).ClassJob.RowId : (byte)0;
-                    if (cardDrawn is CardType.Balance && JobIDs.Ranged.Contains(job) ||
-                        cardDrawn is CardType.Spear && JobIDs.Melee.Contains(job))
+                    // Unsuitable DPS (medium priority)
+                    else if (cardDrawn is CardType.Balance && JobIDs.Ranged.Contains(job) ||
+                             cardDrawn is CardType.Spear && JobIDs.Melee.Contains(job))
                     {
-                        //TargetObject(PartyTargets[i]);
-                        SelectedRandomMember = PartyTargets[i];
-                        return true;
+                        unsuitableDps = partyMember; // Store but keep looking for suitable DPS
+                    }
+                    // Healers/Tanks (lowest priority, if enabled)
+                    else if (IsEnabled(CustomComboPreset.AST_Cards_QuickTargetCards_TargetExtra) &&
+                             (cardDrawn is CardType.Balance && JobIDs.Tank.Contains(job) ||
+                              cardDrawn is CardType.Spear && JobIDs.Healer.Contains(job)))
+                    {
+                        backupTarget = partyMember; // Store but keep looking for DPS
                     }
                 }
 
-                //Give cards to healers/tanks if backup is turned on
-                if (IsEnabled(CustomComboPreset.AST_Cards_QuickTargetCards_TargetExtra))
+                // Set SelectedRandomMember based on priority
+                if (suitableDps is not null)
                 {
-                    for(int i = 0; i <= PartyTargets.Count - 1; i++)
-                    {
-                        byte job = PartyTargets[i] is IBattleChara ? (byte)(PartyTargets[i] as IBattleChara).ClassJob.RowId : (byte)0;
-                        if (cardDrawn is CardType.Balance && JobIDs.Tank.Contains(job) ||
-                            cardDrawn is CardType.Spear && JobIDs.Healer.Contains(job))
-                        {
-                            //TargetObject(PartyTargets[i]);
-                            SelectedRandomMember = PartyTargets[i];
-                            return true;
-                        }
-                    }
+                    SelectedRandomMember = suitableDps;
+                    return true;
+                }
+                if (unsuitableDps is not null)
+                {
+                    SelectedRandomMember = unsuitableDps;
+                    return true;
+                }
+                if (backupTarget is not null)
+                {
+                    SelectedRandomMember = backupTarget;
+                    return true;
                 }
             }
             return false;
@@ -311,22 +317,22 @@ internal partial class AST
 
         public override bool HasCooldowns()
         {
-            if (CustomComboFunctions.GetCooldown(EarthlyStar).CooldownElapsed >= 4f)
+            if (GetCooldown(EarthlyStar).CooldownElapsed >= 4f)
                 return false;
 
-            if (!CustomComboFunctions.ActionReady(Lightspeed))
+            if (!ActionReady(Lightspeed))
                 return false;
 
-            if (!CustomComboFunctions.ActionReady(Divination))
+            if (!ActionReady(Divination))
                 return false;
 
-            if (!CustomComboFunctions.ActionReady(Balance))
+            if (!ActionReady(Balance))
                 return true;
 
-            if (!CustomComboFunctions.ActionReady(LordOfCrowns))
+            if (!ActionReady(LordOfCrowns))
                 return false;
 
-            if (!CustomComboFunctions.ActionReady(UmbralDraw))
+            if (!ActionReady(UmbralDraw))
                 return false;
 
             return true;

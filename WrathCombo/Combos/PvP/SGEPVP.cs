@@ -1,9 +1,14 @@
 ﻿using WrathCombo.CustomComboNS;
+using WrathCombo.CustomComboNS.Functions;
+using WrathCombo.Window.Functions;
 
 namespace WrathCombo.Combos.PvP
 {
     internal static class SGEPvP
     {
+        #region IDS
+
+        public const byte JobID = 40;
         internal class Role : PvPHealer;
 
         internal const uint
@@ -36,6 +41,29 @@ namespace WrathCombo.Combos.PvP
                 Haimatinon = 3111;
         }
 
+        #endregion
+
+        #region Config
+        public static class Config
+        {
+            public static UserInt
+               SGEPvP_DiabrosisThreshold = new("SGEPvP_DiabrosisThreshold");
+
+            internal static void Draw(CustomComboPreset preset)
+            {
+                switch (preset)
+                {
+                    case CustomComboPreset.SGEPvP_Diabrosis:
+                        UserConfig.DrawSliderInt(0, 100, SGEPvP_DiabrosisThreshold,
+                            "Target HP% to use Diabrosis");
+
+                        break;
+                }
+            }
+        }
+
+        #endregion       
+
         internal class SGEPvP_BurstMode : CustomCombo
         {
             protected internal override CustomComboPreset Preset { get; } = CustomComboPreset.SGEPvP_BurstMode;
@@ -44,11 +72,15 @@ namespace WrathCombo.Combos.PvP
             {
                 if (actionID == Dosis)
                 {
-                    if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_KardiaReminder) && !HasEffectAny(Buffs.Kardia))
+                    if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_KardiaReminder) && !HasStatusEffect(Buffs.Kardia, anyOwner: true))
                         return Kardia;
 
                     if (!PvPCommon.TargetImmuneToDamage())
                     {
+                        if (IsEnabled(CustomComboPreset.SGEPvP_Diabrosis) && PvPHealer.CanDiabrosis() && HasTarget() &&
+                            GetTargetHPPercent() <= Config.SGEPvP_DiabrosisThreshold)
+                            return PvPHealer.Diabrosis;
+
                         // Psyche after Phlegma
                         if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_Psyche) && WasLastSpell(Phlegma))
                             return Psyche;
@@ -56,19 +88,19 @@ namespace WrathCombo.Combos.PvP
                         if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_Pneuma) && !GetCooldown(Pneuma).IsCooldown)
                             return Pneuma;
 
-                        if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_Phlegma) && InMeleeRange() && !HasEffect(Buffs.Eukrasia) && GetCooldown(Phlegma).RemainingCharges > 0)
+                        if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_Phlegma) && InMeleeRange() && !HasStatusEffect(Buffs.Eukrasia) && GetCooldown(Phlegma).RemainingCharges > 0)
                             return Phlegma;
 
-                        if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_Toxikon2) && HasEffect(Buffs.Addersting) && !HasEffect(Buffs.Eukrasia))
+                        if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_Toxikon2) && HasStatusEffect(Buffs.Addersting) && !HasStatusEffect(Buffs.Eukrasia))
                             return Toxicon2;
 
-                        if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_Eukrasia) && !TargetHasEffectAny(Debuffs.EukrasianDosis) && GetCooldown(Eukrasia).RemainingCharges > 0 && !HasEffect(Buffs.Eukrasia))
+                        if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_Eukrasia) && !HasStatusEffect(Debuffs.EukrasianDosis, CurrentTarget, true) && GetCooldown(Eukrasia).RemainingCharges > 0 && !HasStatusEffect(Buffs.Eukrasia))
                             return Eukrasia;
 
-                        if (HasEffect(Buffs.Eukrasia))
+                        if (HasStatusEffect(Buffs.Eukrasia))
                             return OriginalHook(Dosis);
 
-                        if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_Toxikon) && !TargetHasEffect(Debuffs.Toxicon) && GetCooldown(Toxikon).RemainingCharges > 0)
+                        if (IsEnabled(CustomComboPreset.SGEPvP_BurstMode_Toxikon) && !HasStatusEffect(Debuffs.Toxicon, CurrentTarget) && GetCooldown(Toxikon).RemainingCharges > 0)
                             return OriginalHook(Toxikon);
                     }
 

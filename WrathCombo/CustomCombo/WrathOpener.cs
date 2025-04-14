@@ -153,7 +153,7 @@ namespace WrathCombo.CustomComboNS
 
             if (CurrentState == OpenerState.OpenerNotReady)
             {
-                if (HasCooldowns())
+                if (HasCooldowns() && !InCombat())
                 {
                     CurrentState = OpenerState.OpenerReady;
                     OpenerStep = 1;
@@ -179,7 +179,7 @@ namespace WrathCombo.CustomComboNS
                     }
                 }
 
-                if (OpenerStep < OpenerActions.Count)
+                if (OpenerStep <= OpenerActions.Count)
                 {
                     foreach (var (Step, Condition) in SkipSteps.Where(x => x.Steps.Any(y => y == OpenerStep)))
                     {
@@ -223,7 +223,7 @@ namespace WrathCombo.CustomComboNS
                         }
                     }
 
-                    if (CurrentOpenerAction == Melee.TrueNorth && !TargetNeedsPositionals())
+                    if (CurrentOpenerAction == RoleActions.Melee.TrueNorth && !TargetNeedsPositionals())
                     {
                         OpenerStep++;
                         CurrentOpenerAction = OpenerActions[OpenerStep - 1];
