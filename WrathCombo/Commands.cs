@@ -37,7 +37,7 @@ public partial class WrathCombo
             $"{Command} auto → Toggle Auto-rotation on/off.\n" +
             $"{Command} debug → Dumps a debug log onto your desktop for developers.\n" +
             $"{OldCommand} → Old alias from XIVSlothCombo, still works!\n\n" +
-            $"This is an private build by Velvet. Dont ask for Support in the official discord!!");
+            $"This is an private build by Velvet. Dont ask for support in the official discord!!");
         EzCmd.Add(OldCommand, OnCommand);
     }
 
