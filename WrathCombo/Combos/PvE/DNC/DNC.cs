@@ -1,5 +1,8 @@
 ﻿#region
+
 using WrathCombo.CustomComboNS;
+using WrathCombo.Data;
+using WrathCombo.Core;
 
 // ReSharper disable UnusedType.Global
 // ReSharper disable ClassNeverInstantiated.Global
@@ -12,23 +15,6 @@ namespace WrathCombo.Combos.PvE;
 
 internal partial class DNC : PhysicalRanged
 {
-    internal class DNC_ST_BasicCombo : CustomCombo
-    {
-        protected internal override CustomComboPreset Preset { get; } = CustomComboPreset.DNC_ST_BasicCombo;
-
-        protected override uint Invoke(uint actionID)
-        {
-            if (actionID is not Fountain)
-                return actionID;
-            
-            if (LevelChecked(Fountain) && ComboAction is Cascade &&
-                ComboTimer > 0)
-                return Fountain;
-
-            return Cascade;
-
-        }
-    }
     internal class DNC_ST_AdvancedMode : CustomCombo
     {
         protected internal override CustomComboPreset Preset =>
@@ -111,10 +97,12 @@ internal partial class DNC : PhysicalRanged
             if (IsEnabled(CustomComboPreset.DNC_ST_Adv_Partner) && !InCombat() &&
                 ActionReady(ClosedPosition) &&
                 !HasStatusEffect(Buffs.ClosedPosition) &&
-                (GetPartyMembers().Count > 1 || HasCompanionPresent()) &&
-                !InAutoMode(true, false)) // Disabled in Auto-Rotation
-                // todo: do not disable for auto-rotation, provide targeting
-                return ClosedPosition;
+                (IsInParty() || HasCompanionPresent()))
+                if (InAutoMode(true, false) ||
+                    IsEnabled(CustomComboPreset.DNC_ST_Adv_PartnerAuto))
+                    return ClosedPosition.Retarget(Cascade, DancePartnerResolver);
+                else
+                    return ClosedPosition;
 
             #endregion
 
@@ -128,6 +116,12 @@ internal partial class DNC : PhysicalRanged
             #endregion
 
             #region Pre-pull
+
+            if (!InCombat() && ContentCheck.IsInConfiguredContent(
+                    Config.DNC_ST_OpenerDifficulty, ContentCheck.ListSet.BossOnly) &&
+                IsEnabled(CustomComboPreset.DNC_ST_BalanceOpener) &&
+                IsEnabled(CustomComboPreset.DNC_ST_Opener_BlockEarly))
+                return All.SavageBlade;
 
             if (!InCombat() && TargetIsHostile())
             {
@@ -182,7 +176,7 @@ internal partial class DNC : PhysicalRanged
             if (IsEnabled(CustomComboPreset.DNC_ST_Adv_Devilment) &&
                 CanWeave() &&
                 LevelChecked(Devilment) &&
-                GetCooldownRemainingTime(Devilment) < 0.05 &&
+                GetCooldownRemainingTime(Devilment) < GCD/2 &&
                 (HasStatusEffect(Buffs.TechnicalFinish) ||
                  WasLastAction(TechnicalFinish4) ||
                  !LevelChecked(TechnicalStep)))
@@ -221,6 +215,14 @@ internal partial class DNC : PhysicalRanged
                 if (HasStatusEffect(Buffs.FourFoldFanDance))
                     return FanDance4;
             }
+
+            // Dance Partner
+            if (IsEnabled(CustomComboPreset.DNC_ST_Adv_AutoPartner) &&
+                CanWeave() &&
+                CurrentPartnerNonOptimal)
+                return HasStatusEffect(Buffs.ClosedPosition)
+                    ? Ending
+                    : ClosedPosition.Retarget(Cascade, DancePartnerResolver);
 
             // Variant Cure
             if (Variant.CanCure(CustomComboPreset.DNC_Variant_Cure, Config.DNCVariantCurePercent))
@@ -336,7 +338,7 @@ internal partial class DNC : PhysicalRanged
             // ST Dance of the Dawn
             if (IsEnabled(CustomComboPreset.DNC_ST_Adv_DawnDance) &&
                 HasStatusEffect(Buffs.DanceOfTheDawnReady) &&
-                LevelChecked(DanceOfTheDawn) &&
+                ActionReady(DanceOfTheDawn) &&
                 (GetCooldownRemainingTime(TechnicalStep) > 5 ||
                  IsOffCooldown(TechnicalStep)) && // Tech is up
                 (Gauge.Esprit >=
@@ -350,12 +352,9 @@ internal partial class DNC : PhysicalRanged
 
             // ST Saber Dance (Emergency Use)
             if (IsEnabled(CustomComboPreset.DNC_ST_Adv_SaberDance) &&
-                LevelChecked(SaberDance) &&
-                (Gauge.Esprit >=
-                 Config
-                     .DNC_ST_Adv_SaberThreshold || // above esprit threshold use
-                 (HasStatusEffect(Buffs
-                      .TechnicalFinish) && // will overcap with Tillana if not used
+                ActionReady(SaberDance) &&
+                (Gauge.Esprit >= Config.DNC_ST_Adv_SaberThreshold || // above esprit threshold use
+                 (HasStatusEffect(Buffs.TechnicalFinish) && // will overcap with Tillana if not used
                   !tillanaDriftProtectionActive && Gauge.Esprit >= 50)))
                 return LevelChecked(DanceOfTheDawn) &&
                        HasStatusEffect(Buffs.DanceOfTheDawnReady)
@@ -373,7 +372,7 @@ internal partial class DNC : PhysicalRanged
 
             // ST Saber Dance
             if (IsEnabled(CustomComboPreset.DNC_ST_Adv_SaberDance) &&
-                LevelChecked(SaberDance) &&
+                ActionReady(SaberDance) &&
                 Gauge.Esprit >=
                 Config.DNC_ST_Adv_SaberThreshold || // Above esprit threshold use
                 (HasStatusEffect(Buffs.TechnicalFinish) &&
@@ -463,10 +462,8 @@ internal partial class DNC : PhysicalRanged
                 // Dance Partner
                 if (ActionReady(ClosedPosition) &&
                     !HasStatusEffect(Buffs.ClosedPosition) &&
-                    (GetPartyMembers().Count > 1 || HasCompanionPresent()) &&
-                    !InAutoMode(true, true)) // Disabled in Auto-Rotation
-                    // todo: do not disable for auto-rotation, provide targeting
-                    return ClosedPosition;
+                    (GetPartyMembers().Count > 1 || HasCompanionPresent()))
+                    return ClosedPosition.Retarget(Cascade, DancePartnerResolver);
 
                 if (TargetIsHostile())
                 {
@@ -544,6 +541,13 @@ internal partial class DNC : PhysicalRanged
                 if (HasStatusEffect(Buffs.FourFoldFanDance))
                     return FanDance4;
             }
+
+            // Dance Partner
+            if (CanWeave() &&
+                CurrentPartnerNonOptimal)
+                return HasStatusEffect(Buffs.ClosedPosition)
+                    ? Ending
+                    : ClosedPosition.Retarget(Cascade, DancePartnerResolver);
 
             // Variant Cure
             if (Variant.CanCure(CustomComboPreset.DNC_Variant_Cure, 50))
@@ -633,7 +637,7 @@ internal partial class DNC : PhysicalRanged
 
             // ST Dance of the Dawn
             if (HasStatusEffect(Buffs.DanceOfTheDawnReady) &&
-                LevelChecked(DanceOfTheDawn) &&
+                ActionReady(DanceOfTheDawn) &&
                 (GetCooldownRemainingTime(TechnicalStep) > 5 ||
                  IsOffCooldown(TechnicalStep)) && // Tech is up
                 (Gauge.Esprit >=
@@ -646,7 +650,7 @@ internal partial class DNC : PhysicalRanged
                 return OriginalHook(DanceOfTheDawn);
 
             // ST Saber Dance
-            if (LevelChecked(SaberDance) &&
+            if (ActionReady(SaberDance) &&
                 Gauge.Esprit >= 50)
                 return LevelChecked(DanceOfTheDawn) &&
                        HasStatusEffect(Buffs.DanceOfTheDawnReady)
@@ -738,10 +742,12 @@ internal partial class DNC : PhysicalRanged
                 IsEnabled(CustomComboPreset.DNC_AoE_Adv_Partner) &&
                 ActionReady(ClosedPosition) &&
                 !HasStatusEffect(Buffs.ClosedPosition) &&
-                (GetPartyMembers().Count > 1 || HasCompanionPresent()) &&
-                !InAutoMode(false, false)) // Disabled in Auto-Rotation
-                // todo: do not disable for auto-rotation, provide targeting
-                return ClosedPosition;
+                (GetPartyMembers().Count > 1 || HasCompanionPresent()))
+                if (InAutoMode(false, false) ||
+                    IsEnabled(CustomComboPreset.DNC_DesirablePartner))
+                    return ClosedPosition.Retarget(Cascade, DancePartnerResolver);
+                else
+                    return ClosedPosition;
 
             #endregion
 
@@ -904,7 +910,7 @@ internal partial class DNC : PhysicalRanged
             // AoE Dance of the Dawn
             if (IsEnabled(CustomComboPreset.DNC_AoE_Adv_DawnDance) &&
                 HasStatusEffect(Buffs.DanceOfTheDawnReady) &&
-                LevelChecked(DanceOfTheDawn) &&
+                ActionReady(DanceOfTheDawn) &&
                 (GetCooldownRemainingTime(TechnicalStep) > 5 ||
                  IsOffCooldown(TechnicalStep)) && // Tech is up
                 (Gauge.Esprit >=
@@ -918,7 +924,7 @@ internal partial class DNC : PhysicalRanged
 
             // AoE Saber Dance (Emergency Use)
             if (IsEnabled(CustomComboPreset.DNC_AoE_Adv_SaberDance) &&
-                LevelChecked(SaberDance) &&
+                ActionReady(SaberDance) &&
                 (Gauge.Esprit >=
                  Config
                      .DNC_AoE_Adv_SaberThreshold || // above esprit threshold use
@@ -938,7 +944,7 @@ internal partial class DNC : PhysicalRanged
 
             // AoE Saber Dance
             if (IsEnabled(CustomComboPreset.DNC_AoE_Adv_SaberDance) &&
-                LevelChecked(SaberDance) &&
+                ActionReady(SaberDance) &&
                 Gauge.Esprit >=
                 Config.DNC_ST_Adv_SaberThreshold || // Above esprit threshold use
                 (HasStatusEffect(Buffs.TechnicalFinish) &&
@@ -1018,10 +1024,12 @@ internal partial class DNC : PhysicalRanged
             if (!InCombat() &&
                 ActionReady(ClosedPosition) &&
                 !HasStatusEffect(Buffs.ClosedPosition) &&
-                (GetPartyMembers().Count > 1 || HasCompanionPresent()) &&
-                !InAutoMode(false, true)) // Disabled in Auto-Rotation
-                // todo: do not disable for auto-rotation, provide targeting
-                return ClosedPosition;
+                (GetPartyMembers().Count > 1 || HasCompanionPresent()))
+                if (InAutoMode(false, true) ||
+                    IsEnabled(CustomComboPreset.DNC_DesirablePartner))
+                    return ClosedPosition.Retarget(Cascade, DancePartnerResolver);
+                else
+                    return ClosedPosition;
 
             #endregion
 
@@ -1157,7 +1165,7 @@ internal partial class DNC : PhysicalRanged
 
             // AoE Dance of the Dawn
             if (HasStatusEffect(Buffs.DanceOfTheDawnReady) &&
-                LevelChecked(DanceOfTheDawn) &&
+                ActionReady(DanceOfTheDawn) &&
                 (GetCooldownRemainingTime(TechnicalStep) > 5 ||
                  IsOffCooldown(TechnicalStep)) && // Tech is up
                 (Gauge.Esprit >= 50))
@@ -1197,6 +1205,24 @@ internal partial class DNC : PhysicalRanged
 
     #region MultiButton Combos
 
+    internal class DNC_ST_BasicCombo : CustomCombo
+    {
+        protected internal override CustomComboPreset Preset { get; } = CustomComboPreset.DNC_ST_BasicCombo;
+
+        protected override uint Invoke(uint actionID)
+        {
+            if (actionID is not Fountain)
+                return actionID;
+
+            if (LevelChecked(Fountain) && ComboAction is Cascade &&
+                ComboTimer > 0)
+                return Fountain;
+
+            return Cascade;
+
+        }
+    }
+
     internal class DNC_ST_MultiButton : CustomCombo
     {
         protected internal override CustomComboPreset Preset =>
@@ -1217,12 +1243,12 @@ internal partial class DNC : PhysicalRanged
 
             // ST Esprit overcap protection
             if (IsEnabled(CustomComboPreset.DNC_ST_EspritOvercap) &&
-                LevelChecked(DanceOfTheDawn) &&
+                ActionReady(DanceOfTheDawn) &&
                 HasStatusEffect(Buffs.DanceOfTheDawnReady) &&
                 Gauge.Esprit >= Config.DNCEspritThreshold_ST)
                 return OriginalHook(DanceOfTheDawn);
             if (IsEnabled(CustomComboPreset.DNC_ST_EspritOvercap) &&
-                LevelChecked(SaberDance) &&
+                ActionReady(SaberDance) &&
                 Gauge.Esprit >= Config.DNCEspritThreshold_ST)
                 return SaberDance;
 
@@ -1277,12 +1303,12 @@ internal partial class DNC : PhysicalRanged
 
             // AoE Esprit overcap protection
             if (IsEnabled(CustomComboPreset.DNC_AoE_EspritOvercap) &&
-                LevelChecked(DanceOfTheDawn) &&
+                ActionReady(DanceOfTheDawn) &&
                 HasStatusEffect(Buffs.DanceOfTheDawnReady) &&
                 Gauge.Esprit >= Config.DNCEspritThreshold_ST)
                 return OriginalHook(DanceOfTheDawn);
             if (IsEnabled(CustomComboPreset.DNC_AoE_EspritOvercap) &&
-                LevelChecked(SaberDance) &&
+                ActionReady(SaberDance) &&
                 Gauge.Esprit >= Config.DNCEspritThreshold_AoE)
                 return SaberDance;
 
@@ -1321,87 +1347,105 @@ internal partial class DNC : PhysicalRanged
 
     #region Dance Partner Features
 
-    /*internal class DNC_DesirablePartner : CustomCombo
+    internal class DNC_DesirablePartner : CustomCombo
     {
-        private static DateTime _lastPartnerCheckTime = DateTime.MinValue;
-
         protected internal override CustomComboPreset Preset =>
             CustomComboPreset.DNC_DesirablePartner;
-
-        private static bool CurrentPartnerNonOptimal =>
-            DesirableDancePartner is not null &&
-            DesirableDancePartner.GameObjectId != CurrentDancePartner;
-
-        private static IGameObject? DesirableDancePartner
-        {
-            get
-            {
-                if ((DateTime.Now - _lastPartnerCheckTime).TotalSeconds <= 3)
-                    return field;
-
-                _lastPartnerCheckTime = DateTime.Now;
-                field = TryGetDancePartner(out var partner, true)
-                    ? partner
-                    : null;
-
-                return field;
-            }
-        }
 
         protected override uint Invoke(uint actionID)
         {
             if (actionID is not (ClosedPosition or Ending)) return actionID;
 
-            var currentTarget = LocalPlayer.TargetObject;
-            var noCurrentPartner = !HasStatusEffect(Buffs.ClosedPosition);
-
-            if (noCurrentPartner || CurrentPartnerNonOptimal)
-                if (DesirableDancePartner.GameObjectId == currentTarget.GameObjectId)
+            if (CurrentPartnerNonOptimal)
+            {
+                if (HasStatusEffect(Buffs.ClosedPosition))
                     return Ending;
-                else
-                {
-                    SetTarget(DesirableDancePartner);
-                    TM.DelayNext(250);
-                    TM.Enqueue(() => SetTarget(currentTarget));
-                    return ClosedPosition;
-                }
+                // I could automatically end partner,
+                // instead of having the user press ending first ...
+                //StatusManager.ExecuteStatusOff(Buffs.ClosedPosition);
 
-            return actionID;
+                return ClosedPosition.Retarget([ClosedPosition, Ending],
+                    DancePartnerResolver, dontCull: true);
+            }
+
+            return (int)Config.DNC_Partner_ActionToShow switch
+            {
+                (int)Config.PartnerShowAction.ClosedPosition => ClosedPosition,
+                (int)Config.PartnerShowAction.SavageBlade => All.SavageBlade,
+                _ => OriginalHook(actionID),
+            };
         }
-    }*/
+    }
 
     #endregion
 
     #region Dance Features
 
-    internal class DNC_DanceStepCombo : CustomCombo
+    internal class DNC_StandardDanceFeatures : CustomCombo
     {
         protected internal override CustomComboPreset Preset =>
-            CustomComboPreset.DNC_DanceStepCombo;
+            CustomComboPreset.DNC_DanceFeatures;
 
         protected override uint Invoke(uint actionID)
         {
-            if (actionID is not (StandardStep or TechnicalStep)) return actionID;
+            if (actionID is not (StandardStep or FinishingMove)) return actionID;
 
-            // Standard Step
-            if (actionID is StandardStep && Gauge.IsDancing &&
+            // Standard Finish
+            if (IsEnabled(CustomComboPreset.DNC_StandardStepCombo) &&
+                actionID is StandardStep &&
+                Gauge.IsDancing &&
                 HasStatusEffect(Buffs.StandardStep))
                 return Gauge.CompletedSteps < 2
                     ? Gauge.NextStep
                     : FinishOrHold(StandardFinish2);
 
-            // Technical Step
-            if (actionID is TechnicalStep && Gauge.IsDancing &&
-                HasStatusEffect(Buffs.TechnicalStep))
-                return Gauge.CompletedSteps < 4
-                    ? Gauge.NextStep
-                    : FinishOrHold(TechnicalFinish4);
+            // Custom Steps
+            if (WantsCustomStepsOnSmallerFeatures)
+                if (GetCustomDanceStep(actionID, out var danceStep))
+                    return danceStep;
+
+            // StandardStep(or Finishing Move) --> Last Dance
+            if (IsEnabled(CustomComboPreset.DNC_StandardStep_LastDance) &&
+                HasStatusEffect(Buffs.LastDanceReady))
+                return LastDance;
 
             return actionID;
         }
     }
 
-    internal class DNC_DanceComboReplacer : CustomCombo
+    internal class DNC_TechnicalDanceFeatures : CustomCombo
+    {
+        protected internal override CustomComboPreset Preset =>
+            CustomComboPreset.DNC_DanceFeatures;
+
+        protected override uint Invoke(uint actionID)
+        {
+            if (actionID is not TechnicalStep) return actionID;
+
+            // Technical Finish
+            if (IsEnabled(CustomComboPreset.DNC_TechnicalStepCombo) &&
+                Gauge.IsDancing &&
+                HasStatusEffect(Buffs.TechnicalStep))
+                return Gauge.CompletedSteps < 4
+                    ? Gauge.NextStep
+                    : FinishOrHold(TechnicalFinish4);
+
+            // Custom Steps
+            if (WantsCustomStepsOnSmallerFeatures)
+                if (GetCustomDanceStep(actionID, out var danceStep))
+                    return danceStep;
+
+            // Technical Step --> Devilment
+            if (IsEnabled(CustomComboPreset.DNC_TechnicalStep_Devilment) &&
+                WasLastWeaponskill(TechnicalFinish4) &&
+                HasStatusEffect(Buffs.TechnicalFinish))
+                return Devilment;
+
+            return actionID;
+        }
+    }
+
+    internal class DNC_CustomDanceSteps : CustomCombo
     {
         protected internal override CustomComboPreset Preset =>
             CustomComboPreset.DNC_CustomDanceSteps;
@@ -1429,7 +1473,7 @@ internal partial class DNC : PhysicalRanged
         protected override uint Invoke(uint actionID)
         {
             // Fan Dance 3 & 4 on Flourish
-            if (actionID is not Flourish || !CanWeave()) return actionID;
+            if (actionID is not Flourish) return actionID;
 
             if (WantsCustomStepsOnSmallerFeatures)
                 if (GetCustomDanceStep(actionID, out var danceStep))
@@ -1482,67 +1526,6 @@ internal partial class DNC : PhysicalRanged
 
     #endregion
 
-    internal class DNC_Starfall_Devilment : CustomCombo
-    {
-        protected internal override CustomComboPreset Preset =>
-            CustomComboPreset.DNC_Starfall_Devilment;
-
-        protected override uint Invoke(uint actionID)
-        {
-            if (actionID is not Devilment) return actionID;
-
-            if (WantsCustomStepsOnSmallerFeatures)
-                if (GetCustomDanceStep(actionID, out var danceStep))
-                    return danceStep;
-
-            if (HasStatusEffect(Buffs.FlourishingStarfall))
-                return StarfallDance;
-
-            return actionID;
-        }
-    }
-
-    internal class DNC_StandardStep_LastDance : CustomCombo
-    {
-        protected internal override CustomComboPreset Preset =>
-            CustomComboPreset.DNC_StandardStep_LastDance;
-
-        protected override uint Invoke(uint actionID)
-        {
-            if (actionID is not (StandardStep or FinishingMove)) return actionID;
-
-            if (WantsCustomStepsOnSmallerFeatures)
-                if (GetCustomDanceStep(actionID, out var danceStep))
-                    return danceStep;
-
-            if (HasStatusEffect(Buffs.LastDanceReady))
-                return LastDance;
-
-            return actionID;
-        }
-    }
-
-    internal class DNC_TechnicalStep_Devilment : CustomCombo
-    {
-        protected internal override CustomComboPreset Preset =>
-            CustomComboPreset.DNC_TechnicalStep_Devilment;
-
-        protected override uint Invoke(uint actionID)
-        {
-            if (actionID is not TechnicalStep) return actionID;
-
-            if (WantsCustomStepsOnSmallerFeatures)
-                if (GetCustomDanceStep(actionID, out var danceStep))
-                    return danceStep;
-
-            if (WasLastWeaponskill(TechnicalFinish4) &&
-                HasStatusEffect(Buffs.TechnicalFinish))
-                return Devilment;
-
-            return actionID;
-        }
-    }
-
     internal class DNC_Procc_Bladeshower : CustomCombo
     {
         protected internal override CustomComboPreset Preset =>
@@ -1577,8 +1560,9 @@ internal partial class DNC : PhysicalRanged
                 if (GetCustomDanceStep(actionID, out var danceStep))
                     return danceStep;
 
-            if (HasStatusEffect(Buffs.FlourishingSymmetry) ||
-                HasStatusEffect(Buffs.SilkenSymmetry))
+            if ((HasStatusEffect(Buffs.FlourishingSymmetry) ||
+                 HasStatusEffect(Buffs.SilkenSymmetry)) &&
+                ActionReady(RisingWindmill))
                 return RisingWindmill;
 
             return actionID;

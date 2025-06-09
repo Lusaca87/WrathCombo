@@ -27,7 +27,7 @@ namespace WrathCombo.CustomComboNS.Functions
         /// <summary> Checks if the player is high enough level to use the passed Action ID. </summary>
         /// <param name="actionid"> ID of the action. </param>
         /// <returns></returns>
-        public static bool LevelChecked(uint actionid) => LocalPlayer.Level >= GetLevel(actionid) && NoBlockingStatuses(actionid) && IsActionUnlocked(actionid);
+        public static bool LevelChecked(uint actionid) => LocalPlayer.Level >= GetLevel(actionid) && IsActionUnlocked(actionid);
 
         /// <summary> Checks if the player is high enough level to use the passed Trait ID. </summary>
         /// <param name="traitid"> ID of the action. </param>
@@ -84,12 +84,20 @@ namespace WrathCombo.CustomComboNS.Functions
         /// <returns></returns>
         public static int GetTraitLevel(uint id) => ActionWatching.GetTraitLevel(id);
 
-        /// <summary> Checks if the player can use an action based on the level required and off cooldown / has charges.</summary>
+        /// <summary> Checks if the player can use an action based on the level required and whether it has charges / is off cooldown. </summary>
         /// <param name="id"> ID of the action. </param>
-        /// <returns></returns>
-        //Note: Testing so far shows non charge skills have a max charge of 1, and it's zero during cooldown
-        public static unsafe bool ActionReady(uint id) => ((GetCooldownRemainingTime(OriginalHook(id)) <= RemainingGCD + 0.5f && ActionWatching.GetAttackType(id) != ActionWatching.ActionAttackType.Ability) || HasCharges(OriginalHook(id))) && ActionManager.Instance()->GetActionStatus(ActionType.Action, OriginalHook(id), checkRecastActive: false, checkCastingActive: false) is 0 or 582 or 580;
+        /// <returns> Non-charge actions have a charge value of 1 when off cooldown; otherwise they have a value of 0. </returns>
+        public static unsafe bool ActionReady(uint id)
+        {
+            uint hookedId = OriginalHook(id);
 
+            return ((GetCooldownRemainingTime(hookedId) <= RemainingGCD + 0.5f && ActionWatching.GetAttackType(hookedId) != ActionWatching.ActionAttackType.Ability) ||
+                HasCharges(hookedId)) && ActionManager.Instance()->GetActionStatus(ActionType.Action, hookedId, checkRecastActive: false, checkCastingActive: false) is 0 or 582 or 580;
+        }
+
+        /// <summary> Checks if all passed actions are ready to be used. </summary>
+        /// <param name="ids"> IDs of the actions. </param>
+        /// <returns></returns>
         public static bool ActionsReady(uint[] ids)
         {
             foreach (var id in ids)
@@ -101,7 +109,7 @@ namespace WrathCombo.CustomComboNS.Functions
         /// <summary> Checks if the last action performed was the passed ID. </summary>
         /// <param name="id"> ID of the action. </param>
         /// <returns></returns>
-        public static bool WasLastAction(uint id) => ActionWatching.CombatActions.Count > 0 ? ActionWatching.CombatActions.LastOrDefault() == id : false;
+        public static bool WasLastAction(uint id) => ActionWatching.CombatActions.Count > 0 && ActionWatching.CombatActions.LastOrDefault() == id;
 
         /// <summary> Returns how many times in a row the last action was used. </summary>
         /// <returns></returns>
@@ -198,10 +206,7 @@ namespace WrathCombo.CustomComboNS.Functions
         /// <param name="weaveTime"> Time when weaving window is over. Defaults to 0.7. </param>
         /// 
         /// <returns> True or false. </returns>
-        public static bool CanWeave(double weaveTime = 0.7)
-        {
-            return (RemainingGCD > weaveTime) || (HasSilence() && HasPacification());
-        }
+        public static bool CanWeave(double weaveTime = 0.7) => RemainingGCD > weaveTime;
 
         /// <summary> Checks if the provided actionID has enough cooldown remaining to weave against it without causing clipping and checks if you're casting a spell. </summary>
         /// <param name="weaveTime"> Time when weaving window is over. Defaults to 0.6. </param>
@@ -265,12 +270,9 @@ namespace WrathCombo.CustomComboNS.Functions
             bool alreadyQueued = ActionManager.Instance()->QueuedActionId != 0;
             bool inSlidecast = (LocalPlayer.TotalCastTime - LocalPlayer.CurrentCastTime) <= 0.5f;
             bool animLocked = ActionManager.Instance()->AnimationLock > 0;
-            bool recast = GetCooldown(actionID).CooldownRemaining <= 0.5f || GetCooldown(actionID).RemainingCharges > 0;
-            bool classCheck = ActionManager.Instance()->GetActionStatus(ActionType.Action, actionID) != 574;
 
-            bool ret = !alreadyQueued && inSlidecast && !animLocked && recast && classCheck;
-            uint status = ActionManager.Instance()->GetActionStatus(ActionType.Action, actionID);
-            return ret && status is 0 or 582;
+            bool ret = !alreadyQueued && inSlidecast && !animLocked && ActionReady(actionID);
+            return ret;
         }
 
         private static bool _raidwideInc;
