@@ -24,7 +24,6 @@ using ECommons.Logging;
 using WrathCombo.Attributes;
 using WrathCombo.AutoRotation;
 using WrathCombo.Combos;
-using WrathCombo.Combos.PvE;
 using WrathCombo.Core;
 using WrathCombo.CustomComboNS;
 using WrathCombo.CustomComboNS.Functions;
@@ -33,7 +32,8 @@ using WrathCombo.Services;
 using WrathCombo.Services.IPC;
 using WrathCombo.Window;
 using WrathCombo.Window.Tabs;
-using ECommons.EzHookManager;
+using WrathCombo.Data.Conflicts;
+using WrathCombo.Services.IPC_Subscriber;
 
 namespace WrathCombo;
 
@@ -152,7 +152,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
         P = this;
         pluginInterface.Create<Service>();
         ECommonsMain.Init(pluginInterface, this, Module.All);
-        PunishLibMain.Init(pluginInterface, AddonName);
+        PunishLibMain.Init(pluginInterface, "Wrath Combo");
 
         TM = new();
         RemoveNullAutos(); 
@@ -166,6 +166,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
         Service.ActionReplacer = new ActionReplacer();
         ActionWatching.Enable();
         IPC = Provider.Init();
+        ConflictingPluginsChecks.Begin();
 
         ConfigWindow = new ConfigWindow();
         _majorChangesWindow = new MajorChangesWindow();
@@ -181,8 +182,8 @@ public sealed partial class WrathCombo : IDalamudPlugin
 
         RegisterCommands();
 
-        DtrBarEntry ??= Svc.DtrBar.Get(AddonName);
-        DtrBarEntry.OnClick = () =>
+        DtrBarEntry ??= Svc.DtrBar.Get("Wrath Combo");
+        DtrBarEntry.OnClick = (_) =>
         {
             ToggleAutoRotation(!Service.Configuration.RotationConfig.Enabled);
         };
@@ -340,7 +341,8 @@ public sealed partial class WrathCombo : IDalamudPlugin
         Service.Configuration.ResetFeatures("v3.1.0.1_BLMRework", Enumerable.Range(2000, 100).ToArray());
         Service.Configuration.ResetFeatures("v3.1.1.0_DRGRework", Enumerable.Range(6000, 800).ToArray());
         Service.Configuration.ResetFeatures("1.0.0.6_DNCRework", Enumerable.Range(4000, 150).ToArray());
-        Service.Configuration.ResetFeatures("1.0.0.11_DRKRework", Enumerable.Range(5000, 200).ToArray());
+        Service.Configuration.ResetFeatures("1.0.0.11_DRKRework", Enumerable.Range(5000, 200).ToArray()); 
+        Service.Configuration.ResetFeatures("1.0.1.11_RDMRework", Enumerable.Range(13000, 999).ToArray());
     }
 
     private void DrawUI()
@@ -389,7 +391,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Used for non-static only window initialization")]
-    public string Name => AddonName;
+    public string Name => "Wrath Combo";
 
     /// <inheritdoc/>
     public void Dispose()
@@ -408,7 +410,7 @@ public sealed partial class WrathCombo : IDalamudPlugin
             }
 
         ws.RemoveAllWindows();
-        Svc.DtrBar.Remove(AddonName);
+        Svc.DtrBar.Remove("Wrath Combo");
         Svc.Framework.Update -= OnFrameworkUpdate;
         Svc.ClientState.TerritoryChanged -= ClientState_TerritoryChanged;
         Svc.PluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
@@ -421,6 +423,8 @@ public sealed partial class WrathCombo : IDalamudPlugin
         IPC.Dispose();
         MoveHook?.Dispose();
 
+        ConflictingPluginsChecks.Dispose();
+        AllStaticIPCSubscriptions.Dispose();
         Svc.ClientState.Login -= PrintLoginMessage;
         ECommonsMain.Dispose();
         P = null;

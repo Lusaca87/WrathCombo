@@ -10,7 +10,7 @@ namespace WrathCombo.Combos.PvE;
 
 internal partial class RPR
 {
-    internal static RPROpenerMaxLevel1 Opener1 = new();
+    #region Enshroud
 
     internal static bool UseEnshroud()
     {
@@ -28,7 +28,7 @@ internal partial class RPR
 
             // Prep for double Enshroud
             if (LevelChecked(PlentifulHarvest) &&
-                GetCooldownRemainingTime(ArcaneCircle) <= GCD * 2 + 1.5)
+                GetCooldownRemainingTime(ArcaneCircle) <= GCD + 1.5f)
                 return true;
 
             //2nd part of Double Enshroud
@@ -50,6 +50,10 @@ internal partial class RPR
         return false;
     }
 
+    #endregion
+
+    #region SoD
+
     internal static bool UseShadowOfDeath()
     {
         if (LevelChecked(ShadowOfDeath) && !HasStatusEffect(Buffs.SoulReaver) &&
@@ -66,15 +70,10 @@ internal partial class RPR
 
                 if (InBossEncounter())
                 {
-                    //1st part double enshroud
-                    if (LevelChecked(PlentifulHarvest) && HasStatusEffect(Buffs.Enshrouded) &&
-                        GetCooldownRemainingTime(ArcaneCircle) <= GCD * 2 + 1.5 && JustUsed(Enshroud))
-                        return true;
-
-                    //2nd part double enshroud
+                    //Double enshroud
                     if (LevelChecked(PlentifulHarvest) && HasStatusEffect(Buffs.Enshrouded) &&
                         (GetCooldownRemainingTime(ArcaneCircle) <= GCD || IsOffCooldown(ArcaneCircle)) &&
-                        (JustUsed(VoidReaping) || JustUsed(CrossReaping)))
+                        (JustUsed(VoidReaping, 2f) || JustUsed(CrossReaping, 2f)))
                         return true;
 
                     //lvl 88+ general use
@@ -92,26 +91,18 @@ internal partial class RPR
 
             if (IsEnabled(CustomComboPreset.RPR_ST_AdvancedMode))
             {
-                if (RPR_ST_ArcaneCircle_SubOption == 1 && !InBossEncounter())
-                {
-                    if (!HasStatusEffect(Buffs.Enshrouded) &&
-                        GetStatusEffectRemainingTime(Debuffs.DeathsDesign, CurrentTarget) <= RPR_SoDRefreshRange)
-                        return true;
-                }
+                if (RPR_ST_ArcaneCircle_SubOption == 1 && !InBossEncounter() &&
+                    !HasStatusEffect(Buffs.Enshrouded) &&
+                    GetStatusEffectRemainingTime(Debuffs.DeathsDesign, CurrentTarget) <= RPR_SoDRefreshRange)
+                    return true;
 
-                if (RPR_ST_ArcaneCircle_SubOption == 0 ||
-                    RPR_ST_ArcaneCircle_SubOption == 1 && InBossEncounter() ||
+                if (RPR_ST_ArcaneCircle_SubOption == 0 || InBossEncounter() ||
                     IsNotEnabled(CustomComboPreset.RPR_ST_ArcaneCircle))
                 {
-                    //1st part double enshroud
-                    if (LevelChecked(PlentifulHarvest) && HasStatusEffect(Buffs.Enshrouded) &&
-                        GetCooldownRemainingTime(ArcaneCircle) <= GCD * 2 + 1.5 && JustUsed(Enshroud))
-                        return true;
-
-                    //2nd part double enshroud
+                    //Double enshroud
                     if (LevelChecked(PlentifulHarvest) && HasStatusEffect(Buffs.Enshrouded) &&
                         (GetCooldownRemainingTime(ArcaneCircle) <= GCD || IsOffCooldown(ArcaneCircle)) &&
-                        (JustUsed(VoidReaping) || JustUsed(CrossReaping)))
+                        (JustUsed(VoidReaping, 2f) || JustUsed(CrossReaping, 2f)))
                         return true;
 
                     //lvl 88+ general use
@@ -130,6 +121,8 @@ internal partial class RPR
 
         return false;
     }
+
+    #endregion
 
     #region Combos
 
@@ -155,13 +148,15 @@ internal partial class RPR
 
     internal static WrathOpener Opener()
     {
-        if (Opener1.LevelChecked)
-            return Opener1;
+        if (StandardOpener.LevelChecked)
+            return StandardOpener;
 
         return WrathOpener.Dummy;
     }
 
-    internal class RPROpenerMaxLevel1 : WrathOpener
+    internal static RPRStandardOpener StandardOpener = new();
+
+    internal class RPRStandardOpener : WrathOpener
     {
         public override int MinOpenerLevel => 100;
 

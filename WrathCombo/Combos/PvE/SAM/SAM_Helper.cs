@@ -1,12 +1,12 @@
 ﻿using Dalamud.Game.ClientState.JobGauge.Enums;
 using Dalamud.Game.ClientState.JobGauge.Types;
-using FFXIVClientStructs.FFXIV.Client.Game;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using WrathCombo.CustomComboNS;
 using WrathCombo.CustomComboNS.Functions;
 using WrathCombo.Data;
+using static FFXIVClientStructs.FFXIV.Client.Game.ActionManager;
 using static WrathCombo.Combos.PvE.SAM.Config;
 using static WrathCombo.CustomComboNS.Functions.CustomComboFunctions;
 using static WrathCombo.Data.ActionWatching;
@@ -15,67 +15,84 @@ namespace WrathCombo.Combos.PvE;
 
 internal partial class SAM
 {
-    internal static SAMOpenerMaxLevel1 Opener1 = new();
+    internal static bool RefreshFugetsu =>
+        GetStatusEffectRemainingTime(Buffs.Fugetsu) < GetStatusEffectRemainingTime(Buffs.Fuka);
 
-    internal static bool RefreshFugetsu => GetStatusEffectRemainingTime(Buffs.Fugetsu) < GetStatusEffectRemainingTime(Buffs.Fuka);
+    internal static bool RefreshFuka =>
+        GetStatusEffectRemainingTime(Buffs.Fuka) < GetStatusEffectRemainingTime(Buffs.Fugetsu);
 
-    internal static bool RefreshFuka => GetStatusEffectRemainingTime(Buffs.Fuka) < GetStatusEffectRemainingTime(Buffs.Fugetsu);
+    internal static bool EnhancedSenei =>
+        TraitLevelChecked(Traits.EnhancedHissatsu);
 
-    internal static bool EnhancedSenei => TraitLevelChecked(Traits.EnhancedHissatsu);
-
-    internal static int SenCount => GetSenCount();
+    internal static int SenCount =>
+        GetSenCount();
 
     internal static bool UseTsubame =>
         LevelChecked(TsubameGaeshi) &&
         (HasStatusEffect(Buffs.TendoKaeshiSetsugekkaReady) ||
-         (HasStatusEffect(Buffs.TsubameReady) && (SenCount is 3 || GetCooldownRemainingTime(Senei) > 33)));
+         HasStatusEffect(Buffs.TsubameReady) && (SenCount is 3 || GetCooldownRemainingTime(Senei) > 33));
 
-    internal static bool M6SReady => !HiddenFeaturesData.IsEnabledWith(CustomComboPreset.SAM_Hid_M6SHoldSquirrelBurst, () =>
-        HiddenFeaturesData.Targeting.R6SSquirrel && CombatEngageDuration().TotalSeconds < 275);
+    internal static bool M6SReady =>
+        !HiddenFeaturesData.IsEnabledWith(CustomComboPreset.SAM_Hid_M6SHoldSquirrelBurst, () =>
+            HiddenFeaturesData.Targeting.R6SSquirrel && CombatEngageDuration().TotalSeconds < 275);
+
+    #region Meikyo
 
     internal static bool UseMeikyo()
     {
-        float gcd = ActionManager.GetAdjustedRecastTime(ActionType.Action, Hakaze) / 100f;
+        float gcd = GetAdjustedRecastTime(ActionType.Action, Hakaze) / 100f;
         int meikyoUsed = CombatActions.Count(x => x == MeikyoShisui);
 
         if (ActionReady(MeikyoShisui) && !HasStatusEffect(Buffs.Tendo) && !HasStatusEffect(Buffs.MeikyoShisui) &&
             (JustUsed(Gekko) || JustUsed(Kasha) || JustUsed(Yukikaze)))
         {
-            if (EnhancedSenei)
+            if ((SAM_ST_Meikyo_Suboption == 0 || InBossEncounter() ||
+                 IsEnabled(CustomComboPreset.SAM_ST_SimpleMode) && InBossEncounter()))
             {
-                //if no opener
-                if ((IsEnabled(CustomComboPreset.SAM_ST_Opener) && SAM_Balance_Content == 1 && !InBossEncounter() ||
-                     IsNotEnabled(CustomComboPreset.SAM_ST_Opener)) &&
-                    meikyoUsed < 1 && !HasStatusEffect(Buffs.TsubameReady))
-                    return true;
-
-                if (HasStatusEffect(Buffs.TsubameReady))
+                if (EnhancedSenei)
                 {
-                    switch (gcd)
+                    //if no opener
+                    if ((IsEnabled(CustomComboPreset.SAM_ST_Opener) && SAM_Balance_Content == 1 && !InBossEncounter() ||
+                         IsNotEnabled(CustomComboPreset.SAM_ST_Opener)) &&
+                        meikyoUsed < 1 && !HasStatusEffect(Buffs.TsubameReady))
+                        return true;
+
+                    if (HasStatusEffect(Buffs.TsubameReady))
                     {
-                        //2.14 GCD
-                        case >= 2.09f when GetCooldownRemainingTime(Senei) <= 10 &&
-                                           (meikyoUsed % 7 is 1 or 2 && SenCount is 3 ||
-                                            meikyoUsed % 7 is 3 or 4 && SenCount is 2 ||
-                                            meikyoUsed % 7 is 5 or 6 && SenCount is 1):
-                        //2.08 gcd
-                        case <= 2.08f when GetCooldownRemainingTime(Senei) <= 10 && SenCount is 3:
-                            return true;
+                        switch (gcd)
+                        {
+                            //2.14 GCD
+                            case >= 2.09f when GetCooldownRemainingTime(Senei) <= 10 &&
+                                               (meikyoUsed % 7 is 1 or 2 && SenCount is 3 ||
+                                                meikyoUsed % 7 is 3 or 4 && SenCount is 2 ||
+                                                meikyoUsed % 7 is 5 or 6 && SenCount is 1):
+                            //2.08 gcd
+                            case <= 2.08f when GetCooldownRemainingTime(Senei) <= 10 && SenCount is 3:
+                                return true;
+                        }
                     }
+
+                    // reset meikyo
+                    if (gcd >= 2.09f && meikyoUsed % 7 is 0 && JustUsed(Yukikaze))
+                        return true;
                 }
 
-                // reset meikyo
-                if (gcd >= 2.09f && meikyoUsed % 7 is 0 && JustUsed(Yukikaze))
+                //Pre Enhanced Senei
+                if (!EnhancedSenei && ActionReady(MeikyoShisui) && !HasStatusEffect(Buffs.TsubameReady))
                     return true;
             }
 
-            //Pre Enhanced Senei
-            if (!EnhancedSenei && ActionReady(MeikyoShisui) && !HasStatusEffect(Buffs.TsubameReady))
+            if (IsEnabled(CustomComboPreset.SAM_ST_SimpleMode) && !InBossEncounter() ||
+                SAM_ST_Meikyo_Suboption == 1 && !InBossEncounter())
                 return true;
         }
 
         return false;
     }
+
+    #endregion
+
+    #region Iaijutsu
 
     internal static bool UseIaijutsu()
     {
@@ -87,51 +104,58 @@ internal partial class SAM
             if (IsEnabled(CustomComboPreset.SAM_ST_AdvancedMode) &&
 
                 //Higanbana
-                ((SAM_ST_CDs_IaijutsuOption[0] &&
-                  SenCount is 1 && GetTargetHPPercent() > higanbanaHPThreshold &&
-                  (SAM_ST_Higanbana_Suboption == 0 ||
-                   SAM_ST_Higanbana_Suboption == 1 && TargetIsBoss()) &&
-                  CanApplyStatus(CurrentTarget, Debuffs.Higanbana) &&
-                  ((JustUsed(MeikyoShisui, 15f) && GetStatusEffectRemainingTime(Debuffs.Higanbana, CurrentTarget) <= higanbanaRefresh) ||
-                   !HasStatusEffect(Debuffs.Higanbana, CurrentTarget))) ||
+                (SAM_ST_CDs_IaijutsuOption[0] &&
+                 SenCount is 1 && GetTargetHPPercent() > higanbanaHPThreshold &&
+                 (SAM_ST_Higanbana_Suboption == 0 || TargetIsBoss()) &&
+                 CanApplyStatus(CurrentTarget, Debuffs.Higanbana) &&
+                 (JustUsed(MeikyoShisui, 15f) && GetStatusEffectRemainingTime(Debuffs.Higanbana, CurrentTarget) <= higanbanaRefresh ||
+                  !HasStatusEffect(Debuffs.Higanbana, CurrentTarget)) ||
 
                  //Tenka Goken
-                 (SAM_ST_CDs_IaijutsuOption[1] && SenCount is 2 && !LevelChecked(MidareSetsugekka)) ||
+                 SAM_ST_CDs_IaijutsuOption[1] && SenCount is 2 &&
+                 !LevelChecked(MidareSetsugekka) ||
 
                  //Midare Setsugekka
-                 (SAM_ST_CDs_IaijutsuOption[2] && SenCount is 3 && LevelChecked(MidareSetsugekka) && !HasStatusEffect(Buffs.TsubameReady))))
+                 SAM_ST_CDs_IaijutsuOption[2] && SenCount is 3 &&
+                 LevelChecked(MidareSetsugekka) && !HasStatusEffect(Buffs.TsubameReady)))
                 return true;
 
             if (IsEnabled(CustomComboPreset.SAM_ST_SimpleMode) &&
 
                 //Higanbana
-                ((SenCount is 1 && GetTargetHPPercent() > 1 && TargetIsBoss() &&
-                  CanApplyStatus(CurrentTarget, Debuffs.Higanbana) &&
-                  ((JustUsed(MeikyoShisui, 15f) && GetStatusEffectRemainingTime(Debuffs.Higanbana, CurrentTarget) <= 15) ||
-                   !HasStatusEffect(Debuffs.Higanbana, CurrentTarget))) ||
+                (SenCount is 1 && GetTargetHPPercent() > 1 && TargetIsBoss() &&
+                 CanApplyStatus(CurrentTarget, Debuffs.Higanbana) &&
+                 (JustUsed(MeikyoShisui, 15f) && GetStatusEffectRemainingTime(Debuffs.Higanbana, CurrentTarget) <= 15 ||
+                  !HasStatusEffect(Debuffs.Higanbana, CurrentTarget)) ||
 
                  //Tenka Goken
-                 (SenCount is 2 && !LevelChecked(MidareSetsugekka)) ||
+                 SenCount is 2 &&
+                 !LevelChecked(MidareSetsugekka) ||
 
                  //Midare Setsugekka
-                 (SenCount is 3 && LevelChecked(MidareSetsugekka) && !HasStatusEffect(Buffs.TsubameReady))))
+                 SenCount is 3 &&
+                 LevelChecked(MidareSetsugekka) && !HasStatusEffect(Buffs.TsubameReady)))
                 return true;
         }
 
         return false;
     }
 
+    #endregion
+
     #region Openers
 
     internal static WrathOpener Opener()
     {
-        if (Opener1.LevelChecked)
-            return Opener1;
+        if (StandardOpener.LevelChecked)
+            return StandardOpener;
 
         return WrathOpener.Dummy;
     }
 
-    internal class SAMOpenerMaxLevel1 : WrathOpener
+    internal static SAMStandardOpener StandardOpener = new();
+
+    internal class SAMStandardOpener : WrathOpener
     {
         public override int MinOpenerLevel => 100;
 

@@ -1,6 +1,5 @@
 ﻿using Dalamud.Utility;
 using ECommons;
-using ECommons.DalamudServices;
 using ECommons.Logging;
 using System;
 using System.Collections.Generic;
@@ -10,7 +9,8 @@ using WrathCombo.Combos;
 using WrathCombo.Extensions;
 using WrathCombo.Services;
 using WrathCombo.Window.Functions;
-using static FFXIVClientStructs.FFXIV.Client.UI.RaptureAtkHistory.Delegates;
+using EZ = ECommons.Throttlers.EzThrottler;
+using TS = System.TimeSpan;
 
 namespace WrathCombo.Core
 {
@@ -19,38 +19,53 @@ namespace WrathCombo.Core
         private static HashSet<CustomComboPreset>? PvPCombos;
         private static HashSet<CustomComboPreset>? VariantCombos;
         private static HashSet<CustomComboPreset>? BozjaCombos;
+        private static HashSet<CustomComboPreset>? OccultCrescentCombos;
         private static HashSet<CustomComboPreset>? EurekaCombos;
         private static Dictionary<CustomComboPreset, CustomComboPreset[]>? ConflictingCombos;
         private static Dictionary<CustomComboPreset, CustomComboPreset?>? ParentCombos;  // child: parent
-
+        
         public static HashSet<CustomComboPreset>? AllPresets;
+        
+        public static HashSet<uint> AllRetargetedActions {
+            get {
+                if (!EZ.Throttle("allRetargetedActions", TS.FromSeconds(3)))
+                    return field;
+                var result = Enum.GetValues<CustomComboPreset>()
+                    .SelectMany(preset => preset.Attributes()?.RetargetedActions ?? [])
+                    .ToHashSet();
+                PluginLog.Verbose($"Retrieved {result.Count} retargeted actions");
+                field = result;
+                return result;
+            }
+        } = null!;
 
         public static void Init()
         {
-            // Secret combos
             PvPCombos = Enum.GetValues<CustomComboPreset>()
-                .Where(preset => preset.GetAttribute<PvPCustomComboAttribute>() != default)
+                .Where(preset => preset.GetAttribute<PvPCustomComboAttribute>() != null)
                 .ToHashSet();
 
             VariantCombos = Enum.GetValues<CustomComboPreset>()
-                .Where(preset => preset.GetAttribute<VariantAttribute>() != default)
+                .Where(preset => preset.GetAttribute<VariantAttribute>() != null)
                 .ToHashSet();
 
             BozjaCombos = Enum.GetValues<CustomComboPreset>()
-                .Where(preset => preset.GetAttribute<BozjaAttribute>() != default)
+                .Where(preset => preset.GetAttribute<BozjaAttribute>() != null)
+                .ToHashSet();
+
+            OccultCrescentCombos = Enum.GetValues<CustomComboPreset>()
+                .Where(preset => preset.GetAttribute<OccultCrescentAttribute>() != null)
                 .ToHashSet();
 
             EurekaCombos = Enum.GetValues<CustomComboPreset>()
-                .Where(preset => preset.GetAttribute<EurekaAttribute>() != default)
+                .Where(preset => preset.GetAttribute<EurekaAttribute>() != null)
                 .ToHashSet();
 
-            // Conflicting combos
             ConflictingCombos = Enum.GetValues<CustomComboPreset>()
                 .ToDictionary(
                     preset => preset,
-                    preset => preset.GetAttribute<ConflictingCombosAttribute>()?.ConflictingPresets ?? Array.Empty<CustomComboPreset>());
+                    preset => preset.GetAttribute<ConflictingCombosAttribute>()?.ConflictingPresets ?? []);
 
-            // Parent combos
             ParentCombos = Enum.GetValues<CustomComboPreset>()
                 .ToDictionary(
                     preset => preset,
@@ -62,7 +77,7 @@ namespace WrathCombo.Core
             {
                 Presets.Attributes.Add(preset, new Presets.PresetAttributes(preset));
             }
-            Svc.Log.Information($"Cached {Presets.Attributes.Count} preset attributes.");
+            PluginLog.Information($"Cached {Presets.Attributes.Count} preset attributes."); 
         }
 
 
@@ -112,6 +127,11 @@ namespace WrathCombo.Core
         /// <param name="preset"> Preset to check. </param>
         /// <returns> The boolean representation. </returns>
         public static bool IsBozja(CustomComboPreset preset) => BozjaCombos.Contains(preset);
+
+        /// <summary> Gets a value indicating whether a preset is secret. </summary>
+        /// <param name="preset"> Preset to check. </param>
+        /// <returns> The boolean representation. </returns>
+        public static bool IsOccultCrescent(CustomComboPreset preset) => OccultCrescentCombos.Contains(preset);
 
         /// <summary> Gets a value indicating whether a preset is secret. </summary>
         /// <param name="preset"> Preset to check. </param>
@@ -207,7 +227,6 @@ namespace WrathCombo.Core
             return ret;
         }
 
-
         public static bool DisablePreset(string preset, bool outputLog = false)
         {
             var pre = GetPresetByString(preset);
@@ -285,6 +304,36 @@ namespace WrathCombo.Core
                 return TogglePreset(pre.Value, outputLog);
             }
             return false;
+        }
+        
+        internal static ComboType GetComboType(CustomComboPreset preset)
+        {
+            var simple = preset.GetAttribute<SimpleCombo>();
+            var advanced = preset.GetAttribute<AdvancedCombo>();
+            var basic = preset.GetAttribute<BasicCombo>();
+            var healing = preset.GetAttribute<HealingCombo>();
+            var mitigation = preset.GetAttribute<MitigationCombo>();
+            var parent = (object?)preset.GetAttribute<ParentComboAttribute>() ??
+                         (object?)preset.GetAttribute<BozjaParentAttribute>() ??
+                         (object?)preset.GetAttribute<EurekaParentAttribute>() ??
+                         preset.GetAttribute<VariantParentAttribute>();
+            
+            if (simple != null)
+                return ComboType.Simple;
+            if (advanced != null)
+                return ComboType.Advanced;
+            if (basic != null)
+                return ComboType.Basic;
+            
+            if (healing != null)
+                return ComboType.Healing;
+            if (mitigation != null)
+                return ComboType.Mitigation;
+            
+            if (parent == null)
+                return ComboType.Feature;
+            
+            return ComboType.Option;
         }
     }
 }

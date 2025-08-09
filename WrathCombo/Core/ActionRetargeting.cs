@@ -106,8 +106,6 @@ public class ActionRetargeting : IDisposable
             if (!Retargets.TryGetValue(replacedAction, out oldRetarget))
                 continue;
 
-
-
             // Flag as a partial overwrite if `actionInReplaced` has different values
             if (replacedActions != oldRetarget.ReplacedActions)
                 partialOverwrite = true;
@@ -175,7 +173,8 @@ public class ActionRetargeting : IDisposable
             showResolver: true, retarget: retarget);
 
         // Run the target resolver
-        RemoveRetarget(retarget.ID);
+        if (!retarget.DontCull)
+            RemoveRetarget(retarget.ID);
         try
         {
             target = retarget.Resolver.Invoke();
@@ -386,7 +385,6 @@ public class ActionRetargeting : IDisposable
             .Where(x => !x.DontCull &&
                         (DateTime.Now - x.Created) > TS.FromSeconds(20))
             .ToList();
-
 
         // Cull each unique Retarget
         if (oldRetargets.Count > 0)

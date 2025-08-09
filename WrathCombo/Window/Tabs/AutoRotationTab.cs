@@ -1,11 +1,11 @@
-﻿using System;
-using Dalamud.Interface.Components;
+﻿using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using ECommons;
 using ECommons.DalamudServices;
 using ECommons.ImGuiMethods;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using Lumina.Excel.Sheets;
+using System;
 using System.Linq;
 using WrathCombo.Combos.PvE;
 using WrathCombo.Extensions;
@@ -92,7 +92,10 @@ namespace WrathCombo.Window.Tabs
                     ImGuiComponents.HelpMarker("For all other targeting modes, AoE will target based on highest number of targets hit. In manual mode, it will only do this if you tick this box.");
                 }
 
-                var input = ImGuiEx.InputInt(100f.Scale(), "Targets Required for AoE Damage Features", ref cfg.DPSSettings.DPSAoETargets);
+                
+                P.UIHelper.ShowIPCControlledIndicatorIfNeeded("DPSAoETargets");
+                var input = P.UIHelper.ShowIPCControlledNumberInputIfNeeded(
+                    "Targets Required for AoE Damage Features", ref cfg.DPSSettings.DPSAoETargets, "DPSAoETargets");
                 if (input)
                 {
                     changed |= input;
@@ -129,7 +132,6 @@ namespace WrathCombo.Window.Tabs
                 changed |= ImGui.Checkbox("Always Target Regardless of Action", ref cfg.DPSSettings.AlwaysSelectTarget);
 
                 ImGuiComponents.HelpMarker("Normally, Auto-rotation will only target an enemy if the next action it would fire needs a target. This will change the behaviour so it will always select the target regardless of what the action can target.");
-
 
                 var npcs = Service.Configuration.IgnoredNPCs.ToList();
                 var selected = npcs.FirstOrNull(x => x.Key == _selectedNpc);
@@ -192,6 +194,11 @@ namespace WrathCombo.Window.Tabs
                 changed |= P.UIHelper.ShowIPCControlledSliderIfNeeded(
                     "Single Target HP% Threshold (target has Regen/Aspected Benefic)", ref cfg.HealerSettings.SingleTargetRegenHPP, "SingleTargetRegenHPP");
                 ImGuiComponents.HelpMarker("You typically want to set this lower than the above setting.");
+                
+                P.UIHelper.ShowIPCControlledIndicatorIfNeeded("SingleTargetExcogHPP");
+                changed |= P.UIHelper.ShowIPCControlledSliderIfNeeded(
+                    "Single Target HP% Threshold (target has Excogitation)", ref cfg.HealerSettings.SingleTargetExcogHPP, "SingleTargetExcogHPP");
+                ImGuiComponents.HelpMarker("You typically want to set this lower than the above setting.");
 
                 P.UIHelper.ShowIPCControlledIndicatorIfNeeded("AoETargetHPP");
                 changed |= P.UIHelper.ShowIPCControlledSliderIfNeeded(
@@ -217,10 +224,15 @@ namespace WrathCombo.Window.Tabs
                 P.UIHelper.ShowIPCControlledIndicatorIfNeeded("AutoRez");
                 changed |= P.UIHelper.ShowIPCControlledCheckboxIfNeeded(
                     "Auto-Resurrect", ref cfg.HealerSettings.AutoRez, "AutoRez");
-                ImGuiComponents.HelpMarker($"Will attempt to resurrect dead party members. Applies to {WHM.ClassID.JobAbbreviation()}, {WHM.JobID.JobAbbreviation()}, {SCH.JobID.JobAbbreviation()}, {AST.JobID.JobAbbreviation()}, {SGE.JobID.JobAbbreviation()}");
+                ImGuiComponents.HelpMarker($"Will attempt to resurrect dead party members. Applies to {WHM.ClassID.JobAbbreviation()}, {WHM.JobID.JobAbbreviation()}, {SCH.JobID.JobAbbreviation()}, {AST.JobID.JobAbbreviation()}, {SGE.JobID.JobAbbreviation()} and {OccultCrescent.ContentName} {Svc.Data.GetExcelSheet<MKDSupportJob>().GetRow(10).Unknown0} {OccultCrescent.Revive.ActionName()}");
                 var autoRez = (bool)P.IPC.GetAutoRotationConfigState(AutoRotationConfigOption.AutoRez)!;
                 if (autoRez)
                 {
+                    ImGuiExtensions.Prefix(false);
+                    P.UIHelper.ShowIPCControlledIndicatorIfNeeded("AutoRezOutOfParty");
+                    changed |= P.UIHelper.ShowIPCControlledCheckboxIfNeeded(
+                        "Apply to Out of Party Members", ref cfg.HealerSettings.AutoRezOutOfParty, "AutoRezOutOfParty");
+
                     ImGuiExtensions.Prefix(false);
                     changed |= ImGui.Checkbox("Require Swiftcast/Dualcast", ref
                         cfg.HealerSettings.AutoRezRequireSwift);
@@ -264,9 +276,12 @@ namespace WrathCombo.Window.Tabs
             changed |= ImGui.InputInt("Throttle Delay (ms)", ref cfg.Throttler);
             ImGuiComponents.HelpMarker("Auto-Rotation has a built in throttler to only run every so many milliseconds for performance reasons. If you experience issues with frame rate, try increasing this value. Do note this may have a side-effect of introducing clipping if set too high, so experiment with the value.");
 
-            using (ImRaii.Disabled(!OrbwalkerIPC.IsEnabled))
+            var orbwalker = (bool)P.IPC.GetAutoRotationConfigState(AutoRotationConfigOption.OrbwalkerIntegration)!;
+            using (ImRaii.Disabled(!orbwalker))
             {
-                changed |= ImGui.Checkbox($"Enable Orbwalker Integration", ref cfg.OrbwalkerIntegration);
+                P.UIHelper.ShowIPCControlledIndicatorIfNeeded("OrbwalkerIntegration");
+                changed |= P.UIHelper.ShowIPCControlledCheckboxIfNeeded(
+                    "Enable Orbwalker Integration", ref cfg.OrbwalkerIntegration, "OrbwalkerIntegration");
 
                 ImGuiComponents.HelpMarker($"This will make Auto-Rotation use actions with cast times even whilst moving, as Orbwalker will lock movement during the cast.");
             }

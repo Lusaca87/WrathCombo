@@ -1,4 +1,4 @@
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using WrathCombo.CustomComboNS;
 using WrathCombo.CustomComboNS.Functions;
 using WrathCombo.Window.Functions;
@@ -82,8 +82,6 @@ namespace WrathCombo.Combos.PvP
                             "Target HP percent threshold to use Eagle Eye Shot Below.");
 
                         break;
-
-
                 }
             }            
         }
@@ -112,7 +110,7 @@ namespace WrathCombo.Combos.PvP
                     if (!PvPCommon.TargetImmuneToDamage() && HasBattleTarget())
                     {
                         // MarksmanSpite execute condition - todo add config
-                        if (IsEnabled(CustomComboPreset.MCHPvP_BurstMode_MarksmanSpite) && HasBattleTarget() && EnemyHealthCurrentHp() < Config.MCHPvP_MarksmanSpite && IsLB1Ready)
+                        if (IsEnabled(CustomComboPreset.MCHPvP_BurstMode_MarksmanSpite) && HasBattleTarget() && GetTargetCurrentHP() < Config.MCHPvP_MarksmanSpite && IsLB1Ready)
                             return MarksmanSpite;
 
                         if (IsEnabled(CustomComboPreset.MCHPvP_BurstMode_Wildfire) && canWeave && overheated && IsOffCooldown(Wildfire))
@@ -140,7 +138,7 @@ namespace WrathCombo.Combos.PvP
 
                         if (IsEnabled(CustomComboPreset.MCHPvP_BurstMode_Analysis))
                         {
-                            if (hasPrimedBuffs && !HasStatusEffect(Buffs.Analysis) && analysisStacks > 0 &&
+                            if (hasPrimedBuffs && !HasStatusEffect(Buffs.Analysis) && !JustUsed(Analysis, 2f) && analysisStacks > 0 &&
                                 (!IsEnabled(CustomComboPreset.MCHPvP_BurstMode_AltDrill) || IsOnCooldown(Wildfire)) &&
                                 !canWeave && !overheated && bigDamageStacks > 0)
                             {

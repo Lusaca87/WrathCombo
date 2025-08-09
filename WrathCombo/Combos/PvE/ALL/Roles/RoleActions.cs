@@ -1,4 +1,5 @@
-﻿using static WrathCombo.CustomComboNS.Functions.CustomComboFunctions;
+﻿using WrathCombo.Data;
+using static WrathCombo.CustomComboNS.Functions.CustomComboFunctions;
 
 namespace WrathCombo.Combos.PvE;
 
@@ -19,13 +20,13 @@ internal static partial class RoleActions
                 Surecast = 160;
         }
 
-        public static bool CanLucidDream(int MPThreshold, bool spellWeave = true) =>
+        public static bool CanLucidDream(int MPThreshold, bool weave = true) =>
             ActionReady(LucidDreaming) &&
             LocalPlayer.CurrentMp <= MPThreshold &&
-            (!spellWeave || CanSpellWeave());
+            (!weave || CanWeave());
 
-        public static bool CanSwiftcast(bool spellweave = true) =>
-            ActionReady(Swiftcast) && (!spellweave || CanSpellWeave());
+        public static bool CanSwiftcast(bool weave = true) =>
+            ActionReady(Swiftcast) && (!weave || CanWeave());
 
         public static bool CanSurecast() =>
             ActionReady(Surecast);
@@ -87,7 +88,7 @@ internal static partial class RoleActions
             ActionReady(SecondWind) && PlayerHealthPercentageHp() <= healthPercent;
 
         public static bool CanArmsLength(int enemyCount, All.Enums.BossAvoidance avoidanceSetting) =>
-            ActionReady(ArmsLength) && CanCircleAoe(7) >= enemyCount &&
+            ActionReady(ArmsLength) && NumberOfEnemiesInRange(ArmsLength) >= enemyCount &&
             ((int)avoidanceSetting == (int)All.Enums.BossAvoidance.Off || !InBossEncounter());
     }
 
@@ -181,7 +182,7 @@ internal static partial class RoleActions
             ActionReady(Rampart) && PlayerHealthPercentageHp() <= healthPercent;
 
         public static bool CanLowBlow() =>
-            ActionReady(LowBlow) && TargetIsCasting();
+            ActionReady(LowBlow) && TargetIsCasting() && (ICDTracker.StatusIsExpired(All.Debuffs.Stun, CurrentTarget.GameObjectId) || ICDTracker.NumberOfTimesApplied(All.Debuffs.Stun, CurrentTarget.GameObjectId) < 3);
 
         public static bool CanProvoke() =>
             ActionReady(Provoke);
@@ -191,8 +192,8 @@ internal static partial class RoleActions
 
         public static bool CanReprisal(int healthPercent = 100, int? enemyCount = null, bool checkTargetForDebuff = true) =>
             (checkTargetForDebuff && !HasStatusEffect(Debuffs.Reprisal, CurrentTarget, true) || !checkTargetForDebuff) &&
-            (enemyCount is null ? InActionRange(Reprisal) : CanCircleAoe(5) >= enemyCount) &&
-            ActionReady(Reprisal) && PlayerHealthPercentageHp() <= healthPercent;
+            (enemyCount is null ? InActionRange(Reprisal) : NumberOfEnemiesInRange(Reprisal) >= enemyCount) &&
+            ActionReady(Reprisal) && PlayerHealthPercentageHp() <= healthPercent && CanApplyStatus(CurrentTarget, Debuffs.Reprisal);
 
         public static bool CanShirk() =>
             ActionReady(Shirk);

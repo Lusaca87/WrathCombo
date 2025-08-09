@@ -34,14 +34,7 @@ internal partial class DRK
     /// </summary>
     /// <seealso cref="CustomComboFunctions.CanWeave(double)" />
     /// <seealso cref="CanDelayedWeave(double,double)" />
-    private static bool CanWeave =>
-        (IsEnabled(Preset.DRK_ST_Adv) &&
-         IsEnabled(Preset.DRK_PreventTripleWeaves) &&
-         CanWeave() &&
-         !ActionWatching.HasDoubleWeaved()) ||
-        ((IsNotEnabled(Preset.DRK_ST_Adv) ||
-          IsNotEnabled(Preset.DRK_PreventTripleWeaves)) &&
-         (CanWeave() || CanDelayedWeave()));
+    private static bool CanWeave => CanWeave() || CanDelayedWeave();
 
     /// <summary>
     ///     DRK's job gauge.
@@ -174,13 +167,14 @@ internal partial class DRK
     /// </returns>
     private static IGameObject? Target(Combo flags, bool restrictToHostile = true)
     {
-        switch (restrictToHostile)
-        {
-            case true when SimpleTarget.HardTarget is not null &&
-                           SimpleTarget.HardTarget.IsHostile():
-            case false when SimpleTarget.HardTarget is not null:
-                return SimpleTarget.HardTarget;
-        }
+        var target = SimpleTarget.HardTarget ?? SimpleTarget.LastHostileHardTarget;
+        if (target is not null)
+            switch (restrictToHostile)
+            {
+                case true when target.IsHostile():
+                case false:
+                    return target;
+            }
 
         if (flags.HasFlag(Combo.AoE))
             return AutoRotationController.DPSTargeting.BaseSelection
@@ -213,7 +207,7 @@ internal partial class DRK
     {
         if (castLocations.Contains(currentAction) &&
             (Gauge.HasDarkArts || LocalPlayer.CurrentMp > 3000) &&
-            CanWeave() && !ActionWatching.HasDoubleWeaved())
+            CanWeave())
             action = OriginalHook(EdgeOfDarkness);
     }
 

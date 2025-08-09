@@ -8,11 +8,12 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
+using ECommons;
 using ECommons.DalamudServices;
 using ECommons.GameHelpers;
 using ECommons.ImGuiMethods;
 using ECommons.Logging;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using WrathCombo.Attributes;
 using WrathCombo.Combos;
 using WrathCombo.Combos.PvE;
@@ -24,14 +25,17 @@ using WrathCombo.Extensions;
 using WrathCombo.Services;
 using static WrathCombo.CustomComboNS.Functions.CustomComboFunctions;
 using static WrathCombo.Attributes.PossiblyRetargetedAttribute;
+using ECommons.Throttlers;
 
 namespace WrathCombo.Window.Functions
 {
     internal class Presets : ConfigWindow
     {
         internal static Dictionary<CustomComboPreset, PresetAttributes> Attributes = new();
+        private static bool _animFrame = false;
         internal class PresetAttributes
         {
+            private CustomComboPreset Preset;
             public bool IsPvP;
             public CustomComboPreset[] Conflicts;
             public CustomComboPreset? Parent;
@@ -40,17 +44,22 @@ namespace WrathCombo.Window.Functions
             public VariantParentAttribute? VariantParent;
             public PossiblyRetargetedAttribute? PossiblyRetargeted;
             public RetargetedAttribute? RetargetedAttribute;
+            public uint[] RetargetedActions => 
+                GetRetargetedActions(Preset, RetargetedAttribute, PossiblyRetargeted, Parent);
             public BozjaParentAttribute? BozjaParent;
             public EurekaParentAttribute? EurekaParent;
+            public OccultCrescentAttribute? OccultCrescentJob;
             public HoverInfoAttribute? HoverInfo;
             public ReplaceSkillAttribute? ReplaceSkill;
             public CustomComboInfoAttribute? CustomComboInfo;
             public AutoActionAttribute? AutoAction;
             public RoleAttribute? RoleAttribute;
             public HiddenAttribute? Hidden;
+            public ComboType ComboType;
 
             public PresetAttributes(CustomComboPreset preset)
             {
+                Preset = preset;
                 IsPvP = PresetStorage.IsPvP(preset);
                 Conflicts = PresetStorage.GetConflicts(preset);
                 Parent = PresetStorage.GetParent(preset);
@@ -61,13 +70,61 @@ namespace WrathCombo.Window.Functions
                 RetargetedAttribute = preset.GetAttribute<RetargetedAttribute>();
                 BozjaParent = preset.GetAttribute<BozjaParentAttribute>();
                 EurekaParent = preset.GetAttribute<EurekaParentAttribute>();
+                OccultCrescentJob = preset.GetAttribute<OccultCrescentAttribute>();
                 HoverInfo = preset.GetAttribute<HoverInfoAttribute>();
                 ReplaceSkill = preset.GetAttribute<ReplaceSkillAttribute>();
                 CustomComboInfo = preset.GetAttribute<CustomComboInfoAttribute>();
                 AutoAction = preset.GetAttribute<AutoActionAttribute>();
                 RoleAttribute = preset.GetAttribute<RoleAttribute>();
                 Hidden = preset.GetAttribute<HiddenAttribute>();
+                ComboType = PresetStorage.GetComboType(preset);
             }
+        }
+        
+        private static uint[] GetRetargetedActions
+            (CustomComboPreset preset,
+                RetargetedAttribute? retargetedAttribute,
+                PossiblyRetargetedAttribute? possiblyRetargeted,
+                CustomComboPreset? parent)
+        {
+            // Pick whichever Retargeted attribute is available
+            RetargetedAttributeBase? retargetAttribute = null;
+            if (retargetedAttribute != null)
+                retargetAttribute = retargetedAttribute;
+            else if (possiblyRetargeted != null)
+                retargetAttribute = possiblyRetargeted;
+            
+            // Bail if the Preset is not Retargeted
+            if (retargetAttribute == null)
+                return [];
+            
+            try {
+                // Bail if not actually enabled
+                if (!Service.Configuration.EnabledActions.Contains(preset))
+                    return [];
+                // ReSharper disable once DuplicatedSequentialIfBodies
+                if (parent != null &&
+                    !Service.Configuration.EnabledActions
+                        .Contains((CustomComboPreset)parent))
+                    return [];
+                if (parent?.Attributes()?.Parent is { } grandParent &&
+                    !Service.Configuration.EnabledActions
+                        .Contains(grandParent))
+                    return [];
+            
+                // Bail if the Condition for PossiblyRetargeted is not satisfied
+                if (retargetAttribute is PossiblyRetargetedAttribute attribute
+                    && IsConditionSatisfied(attribute.PossibleCondition) != true)
+                    return [];
+            }
+            catch (Exception e)
+            {
+                PluginLog.Error($"Failed to check if Preset {preset} is enabled: {e.ToStringFull()}");
+                return [];
+            }
+            
+            // Set the Retargeted Actions if all bails are passed
+            return retargetAttribute.RetargetedActions;
         }
 
         internal static Dictionary<CustomComboPreset, bool> GetJobAutorots => P
@@ -142,6 +199,9 @@ namespace WrathCombo.Window.Functions
 
             DrawRetargetedAttribute(preset);
 
+            if (DrawOccultJobIcon(preset))
+                ImGui.SetCursorPosY(ImGui.GetCursorPosY() - 8f.Scale());
+
             Vector2 length = new();
             using (var styleCol = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudGrey))
             {
@@ -207,7 +267,7 @@ namespace WrathCombo.Window.Functions
                 if (blueAttr.Actions.Count > 0)
                 {
                     ImGui.PushStyleColor(ImGuiCol.Text, blueAttr.NoneSet ? ImGuiColors.DPSRed : ImGuiColors.DalamudOrange);
-                    ImGui.Text($"{(blueAttr.NoneSet ? "No Required Spells Active:" : "Missing active spells:")} {string.Join(", ", blueAttr.Actions.Select(x => ActionWatching.GetBLUIndex(x) + ActionWatching.GetActionName(x)))}");
+                    ImGui.Text($"{(blueAttr.NoneSet ? "No Required Spells Active:" : "Missing active spells:")} {string.Join(", ", blueAttr.Actions.Select(x => ActionWatching.GetBLUIndex(x) + GetActionName(x)))}");
                     ImGui.PopStyleColor();
                 }
 
@@ -248,7 +308,7 @@ namespace WrathCombo.Window.Functions
             if (bozjaParents is not null)
             {
                 ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.HealerGreen);
-                ImGui.TextWrapped($"Part of normal combo{(variantParents.ParentPresets.Length > 1 ? "s" : "")}:");
+                ImGui.TextWrapped($"Part of normal combo{(bozjaParents.ParentPresets.Length > 1 ? "s" : "")}:");
                 StringBuilder builder = new();
                 foreach (var par in bozjaParents.ParentPresets)
                 {
@@ -262,7 +322,6 @@ namespace WrathCombo.Window.Functions
                             builder.Insert(0, $"{(Attributes.ContainsKey(subpar.Value) ? Attributes[subpar.Value].CustomComboInfo.Name : subpar?.GetAttribute<CustomComboInfoAttribute>().Name)} -> ");
                             par2 = subpar!.Value;
                         }
-
                     }
 
                     ImGui.TextWrapped($"- {builder}");
@@ -326,6 +385,7 @@ namespace WrathCombo.Window.Functions
                         case VPR.JobID: VPR.Config.Draw(preset); break;
                         case WAR.JobID: WAR.Config.Draw(preset); break;
                         case WHM.JobID: WHM.Config.Draw(preset); break;
+                        case OccultCrescent.JobID: OccultCrescent.Config.Draw(preset); break;
                         default:
                             break;
                     }
@@ -451,7 +511,7 @@ namespace WrathCombo.Window.Functions
                     foreach (var icon in att.ActionIcons)
                     {
                         var img = Svc.Texture.GetFromGameIcon(new(icon)).GetWrapOrEmpty();
-                        ImGui.Image(img.ImGuiHandle, (img.Size / 2f) * ImGui.GetIO().FontGlobalScale);
+                        ImGui.Image(img.Handle, (img.Size / 2f) * ImGui.GetIO().FontGlobalScale);
                         ImGui.SameLine();
                     }
                     ImGui.EndTooltip();
@@ -490,28 +550,12 @@ namespace WrathCombo.Window.Functions
 
             // Resolved the conditions if possibly retargeted
             if (possiblyRetargeted)
-            {
-                void MakeRetargeted()
+                if (IsConditionSatisfied(Attributes[preset!.Value]
+                        .PossiblyRetargeted!.PossibleCondition) == true)
                 {
                     retargeted = true;
                     possiblyRetargeted = false;
                 }
-
-                // Should have all conditions in PossiblyRetargetedAttribute.Condition
-                switch (Attributes[preset!.Value].PossiblyRetargeted!.PossibleCondition)
-                {
-                    case Condition.RetargetHealingActionsEnabled:
-                        if (Service.Configuration.RetargetHealingActionsToStack)
-                            MakeRetargeted();
-                        break;
-                    case Condition.ASTQuickTargetCardsFeatureEnabled:
-                        if (IsEnabled(CustomComboPreset.AST_Cards_QuickTargetCards))
-                            MakeRetargeted();
-                        break;
-                    default:
-                        return; // No other conditions are supported
-                }
-            }
 
             ImGui.SameLine();
 
@@ -570,6 +614,42 @@ namespace WrathCombo.Window.Functions
                     }
                 }
             }
+        }
+
+        private static bool DrawOccultJobIcon(CustomComboPreset preset)
+        {
+            if (preset.Attributes().OccultCrescentJob == null) return false;
+            var jobID = preset.Attributes().OccultCrescentJob.JobId;
+            if (jobID == -1) return false;
+            
+            #region Error Handling
+            string? error = null;
+
+            if (_animFrame)
+                jobID += 30;
+
+            if (EzThrottler.Throttle("AnimFrameUpdater", 400))
+                _animFrame = !_animFrame;
+
+            if (!Icons.OccultIcons.TryGetValue(jobID, out var icon))
+                error = "FIND";
+            if (icon is null)
+                error = "LOAD";
+            if (error is not null)
+            {
+                PluginLog.Error($"Failed to {error} Occult Crescent job icon for Preset:{preset} using JobID:{jobID}");
+                return false;
+            }
+            #endregion
+
+            var iconMaxSize = 32f.Scale();
+            ImGui.SameLine();
+            var scale = Math.Min(iconMaxSize / icon.Size.X, iconMaxSize / icon.Size.Y);
+            var imgSize = new Vector2(icon.Size.X * scale, icon.Size.Y * scale);
+
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() - 6f.Scale());
+            ImGui.Image(icon.Handle, imgSize);
+            return true;
         }
 
         internal static int AllChildren((CustomComboPreset Preset, CustomComboInfoAttribute Info)[] children)

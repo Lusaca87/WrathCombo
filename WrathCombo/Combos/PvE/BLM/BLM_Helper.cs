@@ -1,5 +1,6 @@
 ﻿using Dalamud.Game.ClientState.JobGauge.Types;
 using Dalamud.Game.ClientState.Statuses;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using WrathCombo.CustomComboNS;
@@ -9,49 +10,52 @@ namespace WrathCombo.Combos.PvE;
 
 internal partial class BLM
 {
-    internal static BLMStandardOpener StandardOpener = new();
-    internal static BLMFlareOpener FlareOpener = new();
-
-    internal static readonly Dictionary<uint, ushort>
-        ThunderList = new()
-        {
-            { Thunder, Debuffs.Thunder },
-            { Thunder2, Debuffs.Thunder2 },
-            { Thunder3, Debuffs.Thunder3 },
-            { Thunder4, Debuffs.Thunder4 },
-            { HighThunder, Debuffs.HighThunder },
-            { HighThunder2, Debuffs.HighThunder2 }
-        };
-
-    internal static uint CurMp => GetPartyMembers().First().CurrentMP;
+    internal static uint CurMp =>
+        GetPartyMembers().First().CurrentMP;
 
     internal static int MaxPolyglot =>
         TraitLevelChecked(Traits.EnhancedPolyglotII) ? 3 :
         TraitLevelChecked(Traits.EnhancedPolyglot) ? 2 : 1;
 
-    internal static bool EndOfFirePhase => FirePhase && !ActionReady(Despair) && !ActionReady(FireSpam) && !ActionReady(FlareStar);
+    internal static bool EndOfFirePhase =>
+        FirePhase && !ActionReady(Despair) && !ActionReady(FireSpam) && !ActionReady(FlareStar);
 
-    internal static bool EndOfIcePhase => IcePhase && CurMp == MP.MaxMP && HasMaxUmbralHeartStacks;
+    internal static bool EndOfIcePhase =>
+        IcePhase && CurMp is MP.MaxMP && HasMaxUmbralHeartStacks;
 
-    internal static bool EndOfIcePhaseAoEMaxLevel => IcePhase && HasMaxUmbralHeartStacks && TraitLevelChecked(Traits.EnhancedAstralFire);
+    internal static bool EndOfIcePhaseAoEMaxLevel =>
+        IcePhase && HasMaxUmbralHeartStacks && TraitLevelChecked(Traits.EnhancedAstralFire);
 
-    internal static bool FlarestarReady => LevelChecked(FlareStar) && AstralSoulStacks is 6;
+    internal static bool FlarestarReady =>
+        LevelChecked(FlareStar) && AstralSoulStacks is 6;
 
-    internal static Status? ThunderDebuffST => GetStatusEffect(ThunderList[OriginalHook(Thunder)], CurrentTarget);
+    internal static Status? ThunderDebuffST =>
+        GetStatusEffect(ThunderList[OriginalHook(Thunder)], CurrentTarget);
 
-    internal static Status? ThunderDebuffAoE => GetStatusEffect(ThunderList[OriginalHook(Thunder2)], CurrentTarget);
+    internal static Status? ThunderDebuffAoE =>
+        GetStatusEffect(ThunderList[OriginalHook(Thunder2)], CurrentTarget);
 
-    internal static float TimeSinceFirestarterBuff => HasStatusEffect(Buffs.Firestarter) ? GetPartyMembers().First().TimeSinceBuffApplied(Buffs.Firestarter) : 0;
+    internal static float TimeSinceFirestarterBuff =>
+        HasStatusEffect(Buffs.Firestarter) ? GetPartyMembers().First().TimeSinceBuffApplied(Buffs.Firestarter) : 0;
 
-    internal static bool HasMaxPolyglotStacks => PolyglotStacks == MaxPolyglot;
+    internal static bool HasMaxPolyglotStacks =>
+        PolyglotStacks == MaxPolyglot;
 
-    internal static uint FireSpam => LevelChecked(Fire4) ? Fire4 : Fire;
+    internal static uint FireSpam =>
+        LevelChecked(Fire4)
+            ? Fire4
+            : Fire;
 
-    internal static uint BlizzardSpam => LevelChecked(Blizzard4) ? Blizzard4 : Blizzard;
+    internal static uint BlizzardSpam =>
+        LevelChecked(Blizzard4)
+            ? Blizzard4
+            : Blizzard;
 
-    internal static bool HasMaxUmbralHeartStacks => !TraitLevelChecked(Traits.UmbralHeart) || UmbralHearts is 3; //Returns true before you can have Umbral Hearts out of design
+    internal static bool HasMaxUmbralHeartStacks =>
+        UmbralHearts is 3;
 
-    internal static bool HasPolyglotStacks() => PolyglotStacks > 0;
+    internal static bool HasPolyglotStacks() =>
+        PolyglotStacks > 0;
 
     #region Movement Prio
 
@@ -65,6 +69,7 @@ internal partial class BLM
                   !HasStatusEffect(Buffs.Triplecast) &&
                   !HasStatusEffect(Role.Buffs.Swiftcast) &&
                   !HasStatusEffect(Buffs.LeyLines)),
+
         // Paradox
         (OriginalHook(Paradox), CustomComboPreset.BLM_ST_Movement,
             () => Config.BLM_ST_MovementOption[1] &&
@@ -73,11 +78,13 @@ internal partial class BLM
                   !HasStatusEffect(Buffs.Firestarter) &&
                   !HasStatusEffect(Buffs.Triplecast) &&
                   !HasStatusEffect(Role.Buffs.Swiftcast)),
+
         //Swiftcast
         (Role.Swiftcast, CustomComboPreset.BLM_ST_Movement,
             () => Config.BLM_ST_MovementOption[2] &&
                   ActionReady(Role.Swiftcast) &&
                   !HasStatusEffect(Buffs.Triplecast)),
+
         //Xeno
         (Xenoglossy, CustomComboPreset.BLM_ST_Movement,
             () => Config.BLM_ST_MovementOption[3] &&
@@ -101,14 +108,19 @@ internal partial class BLM
 
     internal static WrathOpener Opener()
     {
-        if (StandardOpener.LevelChecked && Config.BLM_SelectedOpener == 0)
+        if (StandardOpener.LevelChecked &&
+            Config.BLM_SelectedOpener == 0)
             return StandardOpener;
 
-        if (FlareOpener.LevelChecked && Config.BLM_SelectedOpener == 1)
+        if (FlareOpener.LevelChecked &&
+            Config.BLM_SelectedOpener == 1)
             return FlareOpener;
 
         return WrathOpener.Dummy;
     }
+
+    internal static BLMStandardOpener StandardOpener = new();
+    internal static BLMFlareOpener FlareOpener = new();
 
     internal class BLMStandardOpener : WrathOpener
     {
@@ -153,13 +165,10 @@ internal partial class BLM
 
         internal override UserData ContentCheckConfig => Config.BLM_Balance_Content;
 
-        public override List<int> DelayedWeaveSteps { get; set; } =
-        [
-            6
-        ];
+        public override List<int> DelayedWeaveSteps { get; set; } = [6];
 
         public override bool HasCooldowns() =>
-            CurMp == MP.MaxMP &&
+            CurMp is MP.MaxMP &&
             IsOffCooldown(Manafont) &&
             GetRemainingCharges(Triplecast) >= 1 &&
             GetRemainingCharges(LeyLines) >= 1 &&
@@ -209,13 +218,10 @@ internal partial class BLM
 
         internal override UserData ContentCheckConfig => Config.BLM_Balance_Content;
 
-        public override List<int> DelayedWeaveSteps { get; set; } =
-        [
-            6
-        ];
+        public override List<int> DelayedWeaveSteps { get; set; } = [6];
 
         public override bool HasCooldowns() =>
-            CurMp == MP.MaxMP &&
+            CurMp is MP.MaxMP &&
             IsOffCooldown(Manafont) &&
             GetRemainingCharges(Triplecast) >= 1 &&
             GetRemainingCharges(LeyLines) >= 1 &&
@@ -246,6 +252,37 @@ internal partial class BLM
     internal static byte PolyglotStacks => Gauge.PolyglotStacks;
 
     internal static short PolyglotTimer => Gauge.EnochianTimer;
+
+    internal static class MP
+    {
+        internal const int MaxMP = 10000;
+
+        internal static int FireI => GetResourceCost(OriginalHook(Fire));
+
+        internal static int FlareAoE => GetResourceCost(OriginalHook(Flare));
+
+        internal static int FireAoE => GetResourceCost(OriginalHook(Fire2));
+
+        internal static int FireIII => GetResourceCost(OriginalHook(Fire3));
+
+        internal static int BlizzardAoE => GetResourceCost(OriginalHook(Blizzard2));
+
+        internal static int BlizzardI => GetResourceCost(OriginalHook(Blizzard));
+
+        internal static int Freeze => GetResourceCost(OriginalHook(BLM.Freeze));
+
+        internal static int Despair => GetResourceCost(OriginalHook(BLM.Despair));
+    }
+
+    internal static readonly FrozenDictionary<uint, ushort> ThunderList = new Dictionary<uint, ushort>
+    {
+        { Thunder, Debuffs.Thunder },
+        { Thunder2, Debuffs.Thunder2 },
+        { Thunder3, Debuffs.Thunder3 },
+        { Thunder4, Debuffs.Thunder4 },
+        { HighThunder, Debuffs.HighThunder },
+        { HighThunder2, Debuffs.HighThunder2 }
+    }.ToFrozenDictionary();
 
     #endregion
 
@@ -322,27 +359,6 @@ internal partial class BLM
             Enochian = 460,
             EnhancedPolyglotII = 615,
             EnhancedAstralFire = 616;
-    }
-
-    internal static class MP
-    {
-        internal const int MaxMP = 10000;
-
-        internal static int FireI => GetResourceCost(OriginalHook(Fire));
-
-        internal static int FlareAoE => GetResourceCost(OriginalHook(Flare));
-
-        internal static int FireAoE => GetResourceCost(OriginalHook(Fire2));
-
-        internal static int FireIII => GetResourceCost(OriginalHook(Fire3));
-
-        internal static int BlizzardAoE => GetResourceCost(OriginalHook(Blizzard2));
-
-        internal static int BlizzardI => GetResourceCost(OriginalHook(Blizzard));
-
-        internal static int Freeze => GetResourceCost(OriginalHook(BLM.Freeze));
-
-        internal static int Despair => GetResourceCost(OriginalHook(BLM.Despair));
     }
 
     #endregion

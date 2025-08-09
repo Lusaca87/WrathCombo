@@ -5,6 +5,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.DalamudServices;
 using ECommons.GameFunctions;
 using ECommons.GameHelpers;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using WrathCombo.CustomComboNS;
 using WrathCombo.CustomComboNS.Functions;
@@ -41,7 +42,7 @@ public static class GameObjectExtensions
     public static IGameObject? IfInParty (this IGameObject? obj) =>
         obj != null &&
         CustomComboFunctions.GetPartyMembers()
-            .Any(x => x.GameObjectId != obj.GameObjectId) ? obj : null;
+            .Any(x => x.GameObjectId == obj.GameObjectId) ? obj : null;
 
     /// <summary>
     ///     Can be chained onto a <see cref="IGameObject" /> to make it return
@@ -55,7 +56,7 @@ public static class GameObjectExtensions
     ///     <see langword="null" /> if the target is not a boss.
     /// </summary>
     public static IGameObject? IfBoss (this IGameObject? obj) =>
-        obj != null && CustomComboFunctions.IsBoss(obj) ? obj : null;
+        obj != null && CustomComboFunctions.TargetIsBoss(obj) ? obj : null;
 
     /// <summary>
     ///     Can be chained onto a <see cref="IGameObject" /> to make it return
@@ -86,7 +87,7 @@ public static class GameObjectExtensions
     /// <param name="range">The range to check against. Defaults to 25 yalms.</param>
     public static IGameObject? IfWithinRange
         (this IGameObject? obj, float range = 25) =>
-    obj != null && CustomComboFunctions.IsInRange(obj, range) ? obj : null;
+        obj != null && CustomComboFunctions.IsInRange(obj, range) ? obj : null;
 
     /// <summary>
     ///     Can be chained onto a <see cref="IGameObject" /> to make it return
@@ -150,7 +151,14 @@ public static class GameObjectExtensions
     public static IGameObject? IfStillAround (this IGameObject? obj) =>
         obj != null &&
         Svc.Objects
-            .Any(x => x.GameObjectId != obj.GameObjectId) ? obj : null;
+            .Any(x => x.GameObjectId == obj.GameObjectId) ? obj : null;
+
+    /// <summary>
+    ///     Can be chained onto a <see cref="IGameObject" /> to make it return
+    ///     <see langword="null" /> if the target cannot be affected by the action.
+    /// </summary>
+    public static unsafe IGameObject? IfCanUseOn(this IGameObject? obj, uint actionId) =>
+        obj != null && ActionManager.CanUseActionOnTarget(actionId, obj.Struct()) ? obj : null;
 
     #endregion
 
@@ -179,7 +187,7 @@ public static class GameObjectExtensions
     ///     boolean check for if the target is a boss.
     /// </summary>
     public static bool IsBoss(this IGameObject? obj) =>
-        obj != null && CustomComboFunctions.IsBoss(obj);
+        obj != null && CustomComboFunctions.TargetIsBoss(obj);
 
     /// <summary>
     ///     Can be chained onto a <see cref="IGameObject" /> to make it a quick
@@ -253,6 +261,13 @@ public static class GameObjectExtensions
         obj != null &&
         Svc.Objects
             .Any(x => x.GameObjectId == obj.GameObjectId);
+
+    /// <summary>
+    ///     Can be chained onto a <see cref="IGameObject" /> to make it a quick
+    ///     boolean check for if the object can be affected by the action.
+    /// </summary>
+    public static unsafe bool CanUseOn(this IGameObject? obj, uint actionId) =>
+        obj != null && ActionManager.CanUseActionOnTarget(actionId, obj.Struct());
 
     #endregion
 

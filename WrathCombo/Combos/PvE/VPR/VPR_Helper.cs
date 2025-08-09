@@ -1,28 +1,28 @@
 ﻿using Dalamud.Game.ClientState.JobGauge.Enums;
 using Dalamud.Game.ClientState.JobGauge.Types;
-using FFXIVClientStructs.FFXIV.Client.Game;
 using System;
 using System.Collections.Generic;
 using WrathCombo.CustomComboNS;
 using WrathCombo.CustomComboNS.Functions;
+using static FFXIVClientStructs.FFXIV.Client.Game.ActionManager;
 using static WrathCombo.Combos.PvE.VPR.Config;
 using static WrathCombo.CustomComboNS.Functions.CustomComboFunctions;
 namespace WrathCombo.Combos.PvE;
 
 internal partial class VPR
 {
-    internal static VPROpenerMaxLevel1 Opener1 = new();
+    internal static float IreCD =>
+        GetCooldownRemainingTime(SerpentsIre);
 
-    #region Config
+    internal static bool InRange() =>
+        IsInRange(CurrentTarget, 5f);
 
-    internal static float IreCD => GetCooldownRemainingTime(SerpentsIre);
-
-    internal static bool InRange() => IsInRange(CurrentTarget, 5f);
     internal static bool CappedOnCoils() =>
         TraitLevelChecked(Traits.EnhancedVipersRattle) && RattlingCoilStacks > 2 ||
         !TraitLevelChecked(Traits.EnhancedVipersRattle) && RattlingCoilStacks > 1;
 
-    internal static bool HasRattlingCoilStack() => RattlingCoilStacks > 0;
+    internal static bool HasRattlingCoilStack() =>
+        RattlingCoilStacks > 0;
 
     internal static bool HasHindVenom() =>
         HasStatusEffect(Buffs.HindstungVenom) ||
@@ -32,9 +32,11 @@ internal partial class VPR
         HasStatusEffect(Buffs.FlankstungVenom) ||
         HasStatusEffect(Buffs.FlanksbaneVenom);
 
-    internal static bool NoSwiftscaled() => !HasStatusEffect(Buffs.Swiftscaled);
+    internal static bool NoSwiftscaled() =>
+        !HasStatusEffect(Buffs.Swiftscaled);
 
-    internal static bool NoHuntersInstinct() => !HasStatusEffect(Buffs.HuntersInstinct);
+    internal static bool NoHuntersInstinct() =>
+        !HasStatusEffect(Buffs.HuntersInstinct);
 
     internal static bool NoVenom() =>
         !HasStatusEffect(Buffs.FlanksbaneVenom) &&
@@ -42,9 +44,7 @@ internal partial class VPR
         !HasStatusEffect(Buffs.HindsbaneVenom) &&
         !HasStatusEffect(Buffs.HindstungVenom);
 
-    #endregion Config
-
-    #region Awaken
+    #region Reawaken
 
     internal static bool UseReawaken()
     {
@@ -54,7 +54,9 @@ internal partial class VPR
             !IsEmpowermentExpiring(6))
         {
             //Use whenever
-            if (SerpentOffering >= 50 && TargetIsBoss() && GetTargetHPPercent() < VPR_ST_ReAwaken_Threshold)
+            if (SerpentOffering >= 50 && TargetIsBoss() &&
+                (IsEnabled(CustomComboPreset.VPR_ST_SimpleMode) && GetTargetHPPercent() < 5 ||
+                 IsEnabled(CustomComboPreset.VPR_ST_AdvancedMode) && GetTargetHPPercent() < VPR_ST_ReAwaken_Threshold))
                 return true;
 
             //2min burst
@@ -90,7 +92,7 @@ internal partial class VPR
     {
         if (HasStatusEffect(Buffs.Reawakened))
         {
-                #region Pre Ouroboros
+        #region Pre Ouroboros
 
             if (!TraitLevelChecked(Traits.EnhancedSerpentsLineage))
                 switch (AnguineTribute)
@@ -114,7 +116,7 @@ internal partial class VPR
 
                 #endregion
 
-                #region With Ouroboros
+        #region With Ouroboros
 
             if (TraitLevelChecked(Traits.EnhancedSerpentsLineage))
                 switch (AnguineTribute)
@@ -150,7 +152,7 @@ internal partial class VPR
     {
         if (HasStatusEffect(Buffs.Reawakened))
         {
-                #region Pre Ouroboros
+        #region Pre Ouroboros
 
             if (!TraitLevelChecked(Traits.EnhancedSerpentsLineage))
                 switch (AnguineTribute)
@@ -174,7 +176,7 @@ internal partial class VPR
 
                 #endregion
 
-                #region With Ouroboros
+        #region With Ouroboros
 
             if (TraitLevelChecked(Traits.EnhancedSerpentsLineage))
                 switch (AnguineTribute)
@@ -240,7 +242,7 @@ internal partial class VPR
     {
         float gcd = GCD * times;
 
-        return ActionManager.Instance()->Combo.Timer != 0 && ActionManager.Instance()->Combo.Timer < gcd;
+        return Instance()->Combo.Timer != 0 && Instance()->Combo.Timer < gcd;
     }
 
     #endregion
@@ -249,13 +251,15 @@ internal partial class VPR
 
     internal static WrathOpener Opener()
     {
-        if (Opener1.LevelChecked)
-            return Opener1;
+        if (StandardOpener.LevelChecked)
+            return StandardOpener;
 
         return WrathOpener.Dummy;
     }
 
-    internal class VPROpenerMaxLevel1 : WrathOpener
+    internal static VPRStandardOpener StandardOpener = new();
+
+    internal class VPRStandardOpener : WrathOpener
     {
         public override int MinOpenerLevel => 100;
 
@@ -403,7 +407,9 @@ internal partial class VPR
         FourthGeneration = 34630,
         FourthLegacy = 34643,
         Ouroboros = 34631,
-        LastLash = 34635;
+        LastLash = 34635,
+        TwinfangThresh = 34638,
+        TwinbloodThresh = 34639;
 
     public static class Buffs
     {
